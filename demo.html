@@ -1,0 +1,2095 @@
+<!doctype html>
+<html lang="en" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>RefractGL demo</title>
+<meta name="description" content="Demo of RefractGL, a shader library that adds refraction, dispersion and highlights to existing DOM elements.">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#000000">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://images.unsplash.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400..600&display=swap">
+<script>document.documentElement.classList.replace('no-js', 'js');</script>
+<style>
+/* Metric-matched fallback: Arial scaled to Onest, so the font swap does not reflow the hero */
+@font-face {
+  font-family: "Onest Fallback"; src: local("Arial"), local("ArialMT"), local("Liberation Sans");
+  font-weight: 400 500; size-adjust: 103.76%; ascent-override: 93.49%; descent-override: 29.88%; line-gap-override: 0%;
+}
+@font-face {
+  font-family: "Onest Fallback"; src: local("Arial Bold"), local("Arial-BoldMT"), local("Liberation Sans Bold");
+  font-weight: 600 700; size-adjust: 99.12%; ascent-override: 97.87%; descent-override: 31.28%; line-gap-override: 0%;
+}
+/* Tokens: the only place with colour literals */
+:root {
+  color-scheme: dark;
+  --bg: #000000;
+  --bg-2: #161617;
+  --surface: #1d1d1f;
+  --surface-2: #272729;
+  --ink: #f5f5f7;
+  --ink-2: #a1a1a6;
+  --ink-3: #86868b;
+  --hairline: rgb(255 255 255 / .10);
+  --fill: rgb(255 255 255 / .08);
+  --fill-2: rgb(255 255 255 / .14);
+  --accent: #0071e3;
+  --accent-text: #2997ff;
+  --focus: #2997ff;
+  --danger: #ff6961;
+  --success: #30d158;
+  --on-media: #ffffff;
+  --on-media-2: rgb(255 255 255 / .8);
+  --on-light: #1d1d1f;
+  --on-light-rgb: 29 29 31;
+  --on-light-2: rgb(29 29 31 / .72);
+  --fill-dark: rgb(0 0 0 / .08);
+  --fill-dark-2: rgb(0 0 0 / .16);
+  --media-solid: #1d1d1f;
+  --scrim-rgb: 0 0 0;
+
+  --font-sans: "Onest", "Onest Fallback", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+  --text-hero: clamp(2.25rem, 1.25rem + 5.2vw, 5.75rem);
+  --text-headline: clamp(1.375rem, 1.2rem + 0.6vw, 1.75rem);
+  --text-lead: clamp(1.1875rem, 1.05rem + 0.55vw, 1.5rem);
+  --text-body: 1.0625rem;
+  --text-callout: 0.9375rem;
+  --text-caption: 0.8125rem;
+
+  --space-1: .25rem; --space-2: .5rem; --space-3: .75rem; --space-4: 1rem; --space-5: 1.5rem;
+  --space-6: 2rem; --space-7: 3rem; --space-8: 4rem; --space-9: 5rem;
+
+  --gutter: clamp(1.25rem, 4vw, 4rem);
+  --header-h: 3.5rem;
+  --drawer-w: 23.5rem;
+  --dock-h: 4.5rem;
+
+  --radius-xs: 6px; --radius-sm: 10px; --radius-field: 12px; --radius-md: 16px;
+  --radius-card: 22px; --radius-panel: 28px; --radius-pill: 999px;
+
+
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-exit: cubic-bezier(0.55, 0.055, 0.675, 0.19);
+  --dur-press: 120ms; --dur-hover: 180ms; --dur-ui: 240ms; --dur-overlay: 320ms; --dur-sheet: 450ms;
+
+  --z-header: 40; --z-drawer: 50; --z-popover: 60; --z-toast: 1000;
+}
+
+/* Base */
+*, *::before, *::after { box-sizing: border-box; }
+html {
+  font-size: 100%;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-synthesis: none;
+  text-size-adjust: 100%;
+  overflow-x: clip;
+  accent-color: var(--accent);
+  caret-color: var(--accent);
+  scrollbar-color: color-mix(in srgb, var(--ink) 28%, transparent) transparent;
+}
+[hidden] { display: none !important; }
+body { margin: 0; min-height: 100svh; overflow-x: clip; font-size: var(--text-body); line-height: 1.5; }
+h1, h2, h3 { margin: 0; font-weight: 600; text-wrap: balance; overflow-wrap: break-word; }
+p { margin: 0; text-wrap: pretty; }
+img { display: block; max-width: 100%; height: auto; }
+button, input, select { font: inherit; color: inherit; }
+button, summary, label[for], select, a[href] { cursor: pointer; }
+:disabled { cursor: not-allowed; }
+::selection { background: color-mix(in srgb, var(--accent) 40%, transparent); color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.nowrap { white-space: nowrap; }
+.icon { inline-size: 1.25rem; block-size: 1.25rem; flex: none; }
+.icon--sm { inline-size: 1rem; block-size: 1rem; }
+
+.skip-link {
+  position: absolute; inset-inline-start: var(--space-4); inset-block-start: var(--space-2); z-index: var(--z-toast);
+  padding: var(--space-2) var(--space-4); border-radius: var(--radius-pill);
+  background: var(--surface); color: var(--ink); text-decoration: none; transform: translateY(-200%);
+}
+.skip-link:focus-visible { transform: none; }
+
+/* Wallpaper: the photo is painted once into a canvas that is also the glass backdrop */
+.wallpaper { position: fixed; inset: 0; inline-size: 100%; block-size: 100%; display: block; background: var(--media-solid); }
+
+/* Header: transparent over media */
+.site-header {
+  position: fixed; inset: 0 0 auto; z-index: var(--z-header); block-size: var(--header-h);
+  color: var(--on-media);
+  transition: background-color var(--dur-ui) var(--ease-out), box-shadow var(--dur-ui) var(--ease-out);
+}
+/* Scrolled: a solid bar (the glass capsules fade out); the hairline sits inside, never over the text below */
+.site-header[data-scrolled="true"] { background: var(--bg-2); box-shadow: inset 0 -1px 0 var(--hairline); }
+.site-header__inner {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--space-4);
+  block-size: 100%; padding-inline: var(--gutter);
+}
+/* Over the photo the wordmark and the links sit on glass capsules: the photo stays at full brightness */
+.wordmark {
+  display: inline-flex; align-items: center; min-block-size: 44px; padding-inline: var(--space-4);
+  border-radius: var(--radius-pill);
+  white-space: nowrap; font-weight: 600; font-size: var(--text-body); letter-spacing: -0.01em; line-height: 1;
+}
+.site-header__actions {
+  display: flex; align-items: center; gap: var(--space-5); min-block-size: 44px;
+  padding-inline: var(--space-4) 4px; border-radius: var(--radius-pill);
+}
+.text-link {
+  color: inherit; font-size: var(--text-callout); font-weight: 500; text-decoration: none;
+  text-underline-offset: 0.2em; display: inline-flex; align-items: center; min-block-size: 44px;
+}
+
+/* Buttons */
+.btn {
+  position: relative; display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2);
+  min-block-size: 44px; padding-inline: 1.25rem; border: 0; border-radius: var(--radius-pill);
+  font-size: var(--text-callout); font-weight: 500; line-height: 1; white-space: nowrap;
+  transition: transform var(--dur-press) var(--ease-out), background-color var(--dur-hover) ease;
+}
+.btn:active { transform: scale(.97); }
+.btn--light { background: var(--on-media); color: var(--on-light); min-block-size: 36px; padding-inline: 1rem; }
+.btn--light::after { content: ""; position: absolute; inset: -4px 0; }
+.btn--secondary { background: var(--fill-2); color: var(--ink); }
+.btn--text { background: transparent; color: var(--accent-text); padding-inline: var(--space-3); }
+
+.icon-btn {
+  position: relative; display: inline-grid; place-items: center; inline-size: 48px; block-size: 48px; flex: none;
+  border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--on-media);
+  transition: transform var(--dur-press) var(--ease-out), background-color var(--dur-hover) ease;
+}
+.icon-btn:active { transform: scale(.97); }
+.icon-btn--round { inline-size: 44px; block-size: 44px; border-radius: var(--radius-pill); }
+.icon-btn--plain { color: var(--ink); }
+
+@media (hover: hover) and (pointer: fine) {
+  .text-link:hover { text-decoration: underline; }
+  .btn--secondary:hover { background: color-mix(in srgb, var(--ink) 20%, transparent); }
+  .btn--text:hover { text-decoration: underline; }
+  .icon-btn:hover { background: var(--fill-2); }
+}
+
+/* Hero: the only centred moment */
+.hero {
+  position: relative; min-block-size: 100svh; display: grid; place-items: center; grid-template-columns: minmax(0, 1fr);
+  padding: calc(var(--header-h) + var(--space-6)) var(--gutter) calc(var(--dock-h) + var(--space-8));
+  color: var(--on-media); text-align: center;
+}
+.hero__content {
+  display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; gap: var(--space-5);
+  inline-size: 100%; max-inline-size: 60rem; min-inline-size: 0;
+  transition: transform var(--dur-sheet) var(--ease-drawer);
+}
+/* Hero card (glass): the title and the lead read on it, so the photo around needs no dimming */
+.hero-card {
+  display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; gap: var(--space-4);
+  inline-size: 100%; max-inline-size: 54rem; min-inline-size: 0;
+  padding: clamp(1.75rem, 1rem + 2.6vw, 3.25rem) clamp(1.25rem, 0.5rem + 3.4vw, 4rem);
+  border-radius: clamp(1.75rem, 1.25rem + 1.2vw, 2.5rem); color: var(--on-media);
+}
+.hero__title { font-size: var(--text-hero); line-height: 1.02; letter-spacing: -0.035em; max-inline-size: 9.3em; }
+.hero__lead { font-size: var(--text-lead); line-height: 1.4; max-inline-size: 25.25em; }
+.hero__note { font-size: var(--text-caption); margin-block-start: calc(var(--space-1) * -1); }
+.hero__fade { transition: opacity var(--dur-ui) var(--ease-out), visibility 0s linear 0s; }
+
+/* Command field (glass) */
+.command {
+  display: inline-flex; align-items: center; gap: var(--space-3); max-inline-size: 100%;
+  min-block-size: 56px; padding-inline: var(--space-5) var(--space-2); border-radius: var(--radius-pill);
+  margin-block-start: var(--space-2); vertical-align: top;
+  transition: transform var(--dur-sheet) var(--ease-drawer);
+}
+.command__code {
+  font-family: var(--font-mono); font-size: var(--text-callout); white-space: nowrap; overflow-x: auto;
+  scrollbar-width: none; min-inline-size: 0;
+}
+.command__code[data-overflow="true"] { mask-image: linear-gradient(to right, black calc(100% - 1.5rem), transparent); }
+.command__code::-webkit-scrollbar { display: none; }
+.command__copy .i-check, .command__copy[data-copied="true"] .i-copy { display: none; }
+.command__copy[data-copied="true"] .i-check { display: block; }
+.cta { position: relative; max-inline-size: 100%; min-inline-size: 0; margin-block-end: var(--space-2); }
+.copy-error {
+  position: absolute; inset-inline: 0; inset-block-start: calc(100% + var(--space-2)); margin-inline: auto;
+  inline-size: max-content; max-inline-size: 100%; font-size: var(--text-caption); color: var(--ink);
+}
+.copy-error:not(:empty) { padding: var(--space-1) var(--space-3); border-radius: var(--radius-pill); background: var(--surface-2); }
+
+/* Dock (glass): background switcher */
+.dock {
+  position: absolute; z-index: var(--z-header); left: 50%;
+  bottom: max(var(--space-5), env(safe-area-inset-bottom));
+  display: flex; align-items: center; gap: var(--space-2); padding: var(--space-3);
+  border-radius: var(--radius-card); color: var(--on-media);
+  transform: translate(calc(-50% + var(--shift-x, 0px)), var(--shift-y, 0px));
+  transition: transform var(--dur-sheet) var(--ease-drawer);
+}
+.dock__photos { display: flex; gap: var(--space-2); margin: 0; padding: 0; border: 0; }
+.dock__photo {
+  position: relative; inline-size: 48px; block-size: 48px; padding: 0; border: 0;
+  border-radius: var(--radius-sm); background: var(--media-solid); flex: none;
+  transition: transform var(--dur-press) var(--ease-out);
+}
+.dock__photo img { inline-size: 100%; block-size: 100%; object-fit: cover; border-radius: inherit; }
+.dock__photo:active { transform: scale(.97); }
+.dock__photo[aria-pressed="true"]::after {
+  content: ""; position: absolute; inset: -4px; border-radius: calc(var(--radius-sm) + 4px);
+  border: 2px solid var(--on-media); pointer-events: none;
+}
+.dock__photo[aria-busy="true"] img { opacity: .5; }
+.dock__sep { inline-size: 1px; block-size: 28px; background: var(--fill-2); margin-inline: var(--space-1); }
+
+/* Light glass (adaptive presets over a bright photo): dark text, as on iOS */
+[data-tone="light"], [data-tone="light"] .icon-btn, [data-tone="light"] .tab, [data-tone="light"] .popover__link { color: var(--on-light); }
+[data-tone="light"] .popover__meta { color: var(--on-light-2); }
+[data-tone="light"] .dock__sep { background: var(--fill-dark-2); }
+[data-tone="light"] .dock__photo[aria-pressed="true"]::after { border-color: var(--on-light); }
+[data-tone="light"] .tabbar__lens::after { background: var(--fill-dark); }
+[data-tone="light"] .btn--light { background: var(--on-light); color: var(--on-media); }
+@media (hover: hover) and (pointer: fine) { [data-tone="light"] .icon-btn:hover { background: var(--fill-dark); } }
+
+/* Popover and tooltip (glass) */
+.popover {
+  position: fixed; inset: auto; margin: 0; border: 0; padding: var(--space-4) var(--space-5);
+  inline-size: min(18rem, calc(100vw - 2rem)); border-radius: var(--radius-md);
+  background: transparent; color: var(--on-media); overflow: visible;
+  transform-origin: var(--origin-x, 50%) 100%;
+  opacity: 1; transform: none;
+  transition: opacity var(--dur-hover) var(--ease-out), transform var(--dur-hover) var(--ease-out),
+              overlay var(--dur-hover) allow-discrete, display var(--dur-hover) allow-discrete;
+}
+.popover:not(:popover-open) { opacity: 0; transform: translateY(4px) scale(.98); transition-duration: var(--dur-press); }
+@starting-style { .popover:popover-open { opacity: 0; transform: translateY(4px) scale(.98); } }
+.popover__title { font-size: var(--text-callout); font-weight: 500; }
+.popover__meta { font-size: var(--text-caption); color: var(--on-media-2); margin-block-start: var(--space-1); }
+.popover__link {
+  display: inline-flex; align-items: center; gap: var(--space-1); min-block-size: 44px;
+  color: var(--on-media); font-size: var(--text-callout); font-weight: 500; text-underline-offset: 0.2em;
+}
+.tooltip {
+  position: fixed; z-index: var(--z-toast); left: 0; top: 0; max-inline-size: 16rem;
+  padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm);
+  font-size: var(--text-caption); line-height: 1.3; color: var(--on-media);
+}
+.tooltip:not([hidden]) { animation: fade-in var(--dur-press) var(--ease-out); }
+@keyframes fade-in { from { opacity: 0; } }
+
+/* Status (errors only): solid surface above the dock */
+.status {
+  position: fixed; z-index: var(--z-toast); left: 50%; transform: translateX(-50%);
+  bottom: calc(max(var(--space-5), env(safe-area-inset-bottom)) + var(--dock-h) + var(--space-4));
+  display: flex; align-items: center; gap: var(--space-3); inline-size: max-content; max-inline-size: calc(100vw - 2rem);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  background: var(--surface-2); color: var(--ink); border-radius: var(--radius-md); border: 1px solid var(--hairline);
+  font-size: var(--text-callout);
+}
+.status[hidden] { display: none; }
+.status .icon { color: var(--danger); }
+
+/* Settings drawer: solid surface, non-modal */
+.settings {
+  position: fixed; z-index: var(--z-drawer);
+  inset-block: calc(var(--header-h) + var(--space-2)) var(--space-2); inset-inline-end: var(--space-2);
+  inline-size: min(var(--drawer-w), calc(100% - 1rem));
+  display: flex; flex-direction: column; background: var(--surface); color: var(--ink);
+  border-radius: var(--radius-panel); border: 1px solid var(--hairline); overflow: hidden;
+  visibility: hidden; transform: translateX(calc(100% + 1rem));
+  transition: transform var(--dur-overlay) var(--ease-exit), visibility 0s linear var(--dur-overlay);
+}
+.settings[data-open="true"] {
+  visibility: visible; transform: none;
+  transition: transform var(--dur-sheet) var(--ease-drawer), visibility 0s;
+}
+.settings:focus-visible { outline-offset: -2px; }
+.settings__head { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-4) var(--space-3) var(--space-3) var(--space-5); }
+.settings__title { font-size: var(--text-headline); letter-spacing: -0.015em; flex: 1; }
+.fps { font-size: var(--text-caption); color: var(--ink-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.settings__body { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 0 var(--space-5) var(--space-5); }
+.settings__foot {
+  display: grid; padding: var(--space-3) var(--space-5) var(--space-4);
+  box-shadow: 0 -1px 0 var(--hairline);
+}
+.settings__actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: var(--space-2); }
+.settings__actions .btn { padding-inline: var(--space-4); }
+.settings__status { font-size: var(--text-caption); color: var(--ink-2); display: flex; gap: var(--space-2); align-items: flex-start; }
+.settings__status:not(:empty) { margin-block-start: var(--space-3); }
+.settings__status[data-kind="error"] { color: var(--danger); }
+.settings__status .icon { inline-size: 1rem; block-size: 1rem; margin-block-start: 1px; }
+
+.field { display: grid; gap: var(--space-2); margin-block: var(--space-2) var(--space-4); }
+.field__top { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); min-block-size: 44px; margin-block-end: calc(var(--space-2) * -1); }
+.field__action { margin-inline-end: calc(var(--space-3) * -1); }
+.field__label, .ctl__label, .seg legend { font-size: var(--text-callout); font-weight: 500; }
+.select {
+  appearance: none; inline-size: 100%; min-block-size: 44px; padding-inline: var(--space-4) var(--space-7);
+  border: 1px solid var(--ink-3); border-radius: var(--radius-field); background-color: var(--surface-2);
+  font-size: var(--text-body);
+}
+.select-wrap { position: relative; }
+.select-wrap .icon { position: absolute; inset-inline-end: var(--space-4); inset-block-start: 50%; translate: 0 -50%; pointer-events: none; }
+
+.group { border-block-start: 1px solid var(--hairline); }
+.group > summary {
+  list-style: none; display: flex; align-items: center; justify-content: space-between;
+  min-block-size: 48px; font-size: var(--text-body); font-weight: 500;
+}
+.group > summary::-webkit-details-marker { display: none; }
+.group > summary .icon { color: var(--ink-2); transition: transform var(--dur-hover) var(--ease-out); }
+.group[open] > summary .icon { transform: rotate(180deg); }
+.group__body { display: grid; gap: var(--space-4); padding-block: var(--space-1) var(--space-5); }
+
+.ctl { display: grid; gap: var(--space-1); }
+.ctl__top { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); }
+.ctl__value { font-size: var(--text-callout); color: var(--ink-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ctl__row { display: flex; align-items: center; gap: var(--space-3); }
+.ctl__hint { font-size: var(--text-caption); color: var(--ink-2); }
+.check { display: inline-flex; align-items: center; gap: var(--space-2); min-block-size: 44px; font-size: var(--text-callout); flex: none; }
+.check input { inline-size: 1.125rem; block-size: 1.125rem; margin: 0; }
+
+.range {
+  -webkit-appearance: none; appearance: none; inline-size: 100%; block-size: 28px; margin: 0; background: transparent;
+  --p: 50%;
+}
+.range::-webkit-slider-runnable-track {
+  block-size: 4px; border-radius: var(--radius-pill);
+  background: linear-gradient(to right, var(--ink) var(--p), var(--ink-3) var(--p));
+}
+.range::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none; inline-size: 20px; block-size: 20px; margin-block-start: -8px;
+  border-radius: 50%; background: var(--ink); box-shadow: 0 1px 3px rgb(0 0 0 / .5);
+}
+.range::-moz-range-track { block-size: 4px; border-radius: var(--radius-pill); background: var(--ink-3); }
+.range::-moz-range-progress { block-size: 4px; border-radius: var(--radius-pill); background: var(--ink); }
+.range::-moz-range-thumb { inline-size: 20px; block-size: 20px; border: 0; border-radius: 50%; background: var(--ink); box-shadow: 0 1px 3px rgb(0 0 0 / .5); }
+.range:disabled { opacity: 1; }
+.range:disabled::-webkit-slider-thumb { background: var(--ink-3); }
+.range:disabled::-moz-range-thumb { background: var(--ink-3); }
+
+.swatch {
+  inline-size: 44px; block-size: 44px; flex: none; padding: 2px; border: 1px solid var(--ink-3);
+  border-radius: var(--radius-field); background: var(--surface-2);
+}
+.swatch::-webkit-color-swatch-wrapper { padding: 0; }
+.swatch::-webkit-color-swatch { border: 0; border-radius: var(--radius-sm); }
+.swatch::-moz-color-swatch { border: 0; border-radius: var(--radius-sm); }
+
+.seg { border: 0; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+.seg__options { display: flex; padding: 2px; border-radius: var(--radius-field); background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--ink-3); }
+.seg__option { flex: 1; position: relative; }
+.seg__option input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+.seg__option span {
+  display: grid; place-items: center; min-block-size: 40px; padding-inline: var(--space-2);
+  border-radius: var(--radius-sm); font-size: var(--text-callout); font-weight: 500; text-align: center;
+  transition: background-color var(--dur-hover) ease, color var(--dur-hover) ease;
+}
+.seg__option input:checked + span { background: var(--ink); color: var(--surface); }
+.seg__option input:focus-visible + span { outline: 2px solid var(--focus); outline-offset: 2px; }
+.seg__option input:disabled + span { color: var(--ink-3); text-decoration: line-through; }
+
+.stats { display: grid; grid-template-columns: auto 1fr; gap: var(--space-2) var(--space-4); margin: 0; font-size: var(--text-callout); }
+.stats dt { color: var(--ink-2); }
+.stats dd { margin: 0; text-align: end; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+
+
+/* Playground: a solid page with one window onto the photo. The window's frame paints the page. */
+html { scroll-snap-type: y proximity; }
+.hero, .play { scroll-snap-align: start; }
+.play {
+  position: relative; overflow: clip; display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center;
+  gap: var(--space-6); padding: calc(var(--header-h) + var(--space-7)) var(--gutter) var(--space-8);
+}
+.play__head { position: relative; z-index: 1; display: grid; gap: var(--space-3); justify-items: center; text-align: center; max-inline-size: 38rem; }
+.play__title { font-size: var(--text-headline); letter-spacing: -0.015em; line-height: 1.15; }
+.play__lead { color: var(--ink-2); }
+.chips { position: relative; z-index: 1; display: grid; justify-items: center; gap: var(--space-3); margin-block-start: calc(-1 * var(--space-3)); }
+.chips__label { color: var(--ink-2); font-size: var(--text-callout); }
+.chips__row { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-2); }
+.chip { position: relative; display: block; }
+.chip input { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; opacity: 0; margin: 0; cursor: pointer; }
+.chip span {
+  display: grid; place-items: center; min-block-size: 44px; padding-inline: var(--space-4); border-radius: var(--radius-pill);
+  background: var(--fill); color: var(--ink); font-size: var(--text-callout); font-weight: 500;
+  transition: background-color var(--dur-hover) ease, color var(--dur-hover) ease;
+}
+.chip input:checked + span { background: var(--ink); color: var(--surface); }
+.chip input:focus-visible + span { outline: 2px solid var(--focus); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) { .chip input:not(:checked):hover + span { background: var(--fill-2); } }
+.stage {
+  position: relative; inline-size: 100%; max-inline-size: 75rem; block-size: clamp(30rem, 72svh, 44rem);
+  border-radius: var(--radius-panel); color: var(--on-media);
+}
+/* The page around the window: a solid frame (a border, not a shadow) with the window's radius inside. */
+.stage::before {
+  content: ""; position: absolute; inset: -100vmax; pointer-events: none;
+  border: 100vmax solid var(--bg); border-radius: calc(100vmax + var(--radius-panel));
+}
+.lens {
+  position: absolute; left: 0; top: 0; inline-size: clamp(120px, 15vw, 176px); aspect-ratio: 1;
+  border-radius: 50%; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none;
+  transition: scale var(--dur-hover) var(--ease-out);
+}
+.lens[data-grabbed="true"] { cursor: grabbing; scale: 1.06; }
+/* Photo autoplay toggle (glass): above the lens, Pause <-> Play swap (R5) */
+.stage__auto { position: absolute; z-index: 2; inset-block-start: var(--space-4); inset-inline-end: var(--space-4); }
+.stage__auto .icon {
+  grid-area: 1 / 1;
+  transition: opacity var(--dur-overlay) var(--ease-out), scale var(--dur-overlay) var(--ease-out), filter var(--dur-overlay) var(--ease-out);
+}
+.stage__auto[data-playing="true"] .i-play, .stage__auto[data-playing="false"] .i-pause { opacity: 0; scale: .25; filter: blur(4px); }
+.lens:focus-visible { outline-offset: 4px; }
+.tabbar {
+  position: absolute; inset-block-end: var(--space-5); left: 50%; translate: -50% 0;
+  display: flex; padding: var(--space-1); border-radius: var(--radius-pill);
+}
+.tabbar__lens {
+  position: absolute; left: 0; top: var(--space-1); inline-size: 76px; block-size: calc(100% - 2 * var(--space-1));
+  border-radius: var(--radius-pill); pointer-events: none;
+}
+.tabbar__lens::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: var(--fill); }
+.tab {
+  position: relative; display: grid; justify-items: center; align-content: center; gap: 2px;
+  inline-size: 76px; min-block-size: 56px; padding: var(--space-1) 0; border: 0; border-radius: var(--radius-pill);
+  background: transparent; color: var(--on-media); font-size: var(--text-caption); font-weight: 500; line-height: 1.1;
+}
+.tab:focus-visible { outline-offset: -2px; }
+@media (max-width: 480px) {
+  .header-play { display: none; }
+  .tab, .tabbar__lens { inline-size: 66px; }
+}
+@media (max-width: 360px) {
+  /* The title keeps two lines on the card: the hero gutter matches the header's, the card pads less */
+  .hero { padding-inline: var(--space-3); }
+  .hero-card { padding-inline: var(--space-4); }
+  .tab, .tabbar__lens { inline-size: 62px; }
+  .site-header__inner { padding-inline: var(--space-3); gap: var(--space-2); }
+  .wordmark { padding-inline: var(--space-3); }
+  .site-header__actions { padding-inline-start: var(--space-3); gap: var(--space-3); }
+}
+
+/* Layout while the drawer is open */
+@media (min-width: 900px) {
+  body[data-settings="open"] .hero__content { transform: translateX(calc(var(--drawer-w) / -2)); }
+  body[data-settings="open"] .dock { --shift-x: calc(var(--drawer-w) / -2); }
+}
+@media (max-width: 899.98px) {
+  .settings {
+    inset: auto 0 0 0; inline-size: 100%; max-block-size: 54dvh;
+    border-radius: var(--radius-panel) var(--radius-panel) 0 0; transform: translateY(calc(100% + 1rem));
+  }
+  body[data-settings="open"] .hero__fade { opacity: 0; visibility: hidden; transition: opacity var(--dur-press) var(--ease-out), visibility 0s linear var(--dur-press); }
+  body[data-settings="open"] .command { transform: translateY(var(--cmd-shift-y, 0px)); }
+  body[data-settings="open"] .dock { --shift-y: var(--dock-shift-y, 0px); }
+}
+@media (max-width: 480px) {
+  .site-header__actions { gap: var(--space-3); }
+  .dock { gap: var(--space-1); }
+  .dock__photos { gap: var(--space-1); }
+  .dock__photo, .icon-btn { inline-size: 44px; block-size: 44px; }
+  .settings-toggle { inline-size: 36px; padding: 0; }
+  .settings-toggle__label {
+    position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden;
+    clip-path: inset(50%); white-space: nowrap;
+  }
+}
+@media (min-width: 480.02px) { .settings-toggle__icon { display: none; } }
+@media (max-height: 700px) {
+  .hero { padding-block: calc(var(--header-h) + var(--space-4)) calc(var(--dock-h) + var(--space-6)); }
+  .hero__content { gap: var(--space-4); }
+}
+@media (max-width: 360px) {
+  .dock { padding: var(--space-2); }
+  .dock__photo, .dock .icon-btn { inline-size: 40px; block-size: 40px; }
+  .dock__photo::before, .dock .icon-btn::before { content: ""; position: absolute; inset: -2px; }
+}
+
+html.no-js .dock, html.no-js [data-js] { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .hero__content, .command, .dock, .btn, .icon-btn, .dock__photo, .group > summary .icon, .lens { transition: none; }
+  .lens[data-grabbed="true"] { scale: none; }
+  .stage__auto .icon { transition: opacity var(--dur-hover) ease; scale: none !important; filter: none !important; }
+  .site-header { transition: none; }
+  .btn:active, .icon-btn:active, .dock__photo:active { transform: none; }
+  .settings, .settings[data-open="true"] { transition: opacity var(--dur-hover) ease, visibility 0s linear var(--dur-hover); transform: none; opacity: 0; }
+  .settings[data-open="true"] { opacity: 1; transition: opacity var(--dur-hover) ease, visibility 0s; }
+  .popover, .popover:not(:popover-open) { transform: none; }
+  @starting-style { .popover:popover-open { transform: none; } }
+}
+@media (forced-colors: active) {
+  .command, .dock, .popover, .tooltip, .tabbar, .lens, .hero-card, .wordmark, .site-header__actions, .stage__auto { background: Canvas; color: CanvasText; border: 1px solid CanvasText; }
+  .chip span { border: 1px solid CanvasText; }
+  .chip input:checked + span, .tab[aria-checked="true"] { background: Highlight; color: HighlightText; }
+  .tabbar__lens { display: none; }
+}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<canvas class="wallpaper" id="wallpaper" aria-hidden="true"></canvas>
+
+<header class="site-header" id="header" data-scrolled="false">
+  <div class="site-header__inner">
+    <span class="wordmark" id="brand"><span class="wordmark__text">RefractGL</span></span>
+    <div class="site-header__actions" id="headerNav">
+      <a class="text-link header-play" href="#play" data-js>Playground</a>
+      <a class="text-link" href="README.md">Docs</a>
+      <button class="btn btn--light settings-toggle" id="settingsToggle" type="button" aria-expanded="false" aria-controls="settings" data-js>
+        <svg class="icon settings-toggle__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/></svg>
+        <span class="settings-toggle__label">Glass settings</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+  <section class="hero" aria-labelledby="heroTitle">
+    <div class="hero__content">
+      <div class="hero-card hero__fade" id="heroCard">
+        <h1 class="hero__title" id="heroTitle">Liquid glass in&nbsp;the&nbsp;browser</h1>
+        <p class="hero__lead">Refraction, dispersion and highlights on top of real DOM elements. Every glass pane on the page is drawn with one WebGL2 call.</p>
+        <p class="hero__note">MIT License, no dependencies.</p>
+      </div>
+      <div class="cta">
+        <div class="command" id="command">
+          <code class="command__code" id="snippet" translate="no">new RefractGL(element, options)</code>
+          <button class="icon-btn icon-btn--round command__copy" id="copyBtn" type="button" aria-label="Copy code" data-tip="Copy code" data-js>
+            <svg class="icon i-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+            <svg class="icon i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+          </button>
+          <span class="sr-only" id="copyLive" role="status" aria-live="polite"></span>
+        </div>
+        <p class="copy-error" id="copyStatus" aria-live="polite"></p>
+      </div>
+    </div>
+    <div class="dock" id="dock" role="toolbar" aria-label="Backdrop under the glass">
+      <div class="dock__photos" id="photos" role="group" aria-label="Backdrop photos"></div>
+      <span class="dock__sep" aria-hidden="true"></span>
+      <button class="icon-btn" id="uploadBtn" type="button" aria-label="Upload your photo" data-tip="Upload your photo">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 5h6"/><path d="M19 2v6"/><path d="M21 11.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7.5"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/><circle cx="9" cy="9" r="2"/></svg>
+      </button>
+      <input type="file" id="uploadInput" accept="image/*" hidden>
+      <button class="icon-btn" id="creditBtn" type="button" popovertarget="credit" aria-label="About this photo" data-tip="About this photo">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+      </button>
+    </div>
+  </section>
+  <section class="play" id="play" aria-labelledby="playTitle" data-js>
+    <div class="play__head">
+      <h2 class="play__title" id="playTitle">Glass in motion</h2>
+      <p class="play__lead">Drag the lens and change its material. iOS glass is see-through: a light haze, slight magnification and a soft light edge. In the settings, every element has ten presets.</p>
+    </div>
+    <div class="chips" data-js>
+      <p class="chips__label" id="lensMatLabel">Lens material</p>
+      <div class="chips__row" role="radiogroup" aria-labelledby="lensMatLabel">
+        <label class="chip"><input type="radio" name="lensMat" value="lens" checked><span>Magnifier</span></label>
+        <label class="chip"><input type="radio" name="lensMat" value="ios"><span>iOS</span></label>
+        <label class="chip"><input type="radio" name="lensMat" value="iosClear"><span>Clear</span></label>
+        <label class="chip"><input type="radio" name="lensMat" value="frosted"><span>Frosted</span></label>
+        <label class="chip"><input type="radio" name="lensMat" value="ice"><span>Ice</span></label>
+        <label class="chip"><input type="radio" name="lensMat" value="crystal"><span>Crystal</span></label>
+      </div>
+    </div>
+    <div class="stage" id="stage" role="group" aria-label="Glass playground">
+      <button class="icon-btn icon-btn--round stage__auto" id="autoBtn" type="button" data-playing="false" aria-label="Play slideshow" data-tip="Play slideshow">
+        <svg class="icon i-pause" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="14" y="3" width="5" height="18" rx="1"/><rect x="5" y="3" width="5" height="18" rx="1"/></svg>
+        <svg class="icon i-play" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg>
+      </button>
+      <div class="lens" id="lens" tabindex="0" role="group" aria-roledescription="draggable lens" aria-label="Lens" aria-describedby="lensHint" data-js></div>
+      <p class="sr-only" id="lensHint">Drag with a mouse or a finger. With a keyboard, use the arrow keys; hold Shift for bigger steps.</p>
+      <div class="tabbar" id="tabbar" role="radiogroup" aria-label="Tab bar">
+        <div class="tabbar__lens" id="tabLens" aria-hidden="true"></div>
+        <button class="tab" type="button" role="radio" aria-checked="true" tabindex="0"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg><span>Photos</span></button>
+        <button class="tab" type="button" role="radio" aria-checked="false" tabindex="-1"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"/><path d="M15 5.764v15"/><path d="M9 3.236v15"/></svg><span>Maps</span></button>
+        <button class="tab" type="button" role="radio" aria-checked="false" tabindex="-1"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span>Music</span></button>
+        <button class="tab" type="button" role="radio" aria-checked="false" tabindex="-1"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><span>Search</span></button>
+      </div>
+    </div>
+  </section>
+</main>
+
+
+<div class="popover" id="credit" popover>
+  <p class="popover__title" id="creditTitle">Mountains at night</p>
+  <p class="popover__meta" id="creditMeta">Photo: Unsplash</p>
+  <a class="popover__link" id="creditLink" href="https://images.unsplash.com/photo-1519681393784-d120267933ba" target="_blank" rel="noopener">Open original
+    <svg class="icon icon--sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg>
+  </a>
+</div>
+
+<div class="tooltip" id="tooltip" role="tooltip" hidden><span id="tooltipText"></span></div>
+
+<div class="status" id="status" role="alert" hidden>
+  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+  <span id="statusText"></span>
+  <button class="btn btn--text" id="statusRetry" type="button" hidden>Retry</button>
+  <button class="icon-btn icon-btn--plain icon-btn--round" id="statusClose" type="button" aria-label="Close">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+  </button>
+</div>
+
+<aside class="settings" id="settings" aria-labelledby="settingsTitle" tabindex="-1" data-open="false" data-js>
+  <div class="settings__head">
+    <h2 class="settings__title" id="settingsTitle" tabindex="-1">Settings</h2>
+    <span class="fps" id="fpsBadge" aria-hidden="true"></span>
+    <button class="icon-btn icon-btn--plain icon-btn--round" id="settingsClose" type="button" aria-label="Close">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+    </button>
+  </div>
+  <div class="settings__body">
+    <div class="field">
+      <div class="field__top">
+        <label class="field__label" for="target">Element</label>
+        <button class="btn btn--text field__action" id="resetBtn" type="button" aria-label="Reset the selected element">
+          <svg class="icon icon--sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+          Reset
+        </button>
+      </div>
+      <div class="select-wrap">
+        <select class="select" id="target">
+          <optgroup label="First screen">
+            <option value="header">Header</option>
+            <option value="hero">Hero card</option>
+            <option value="command" selected>Code field</option>
+            <option value="dock">Dock</option>
+            <option value="overlay">Tooltip and menu</option>
+          </optgroup>
+          <optgroup label="Playground">
+            <option value="tabbar">Tab bar and slideshow button</option>
+            <option value="tabLens">Tab bar lens</option>
+            <option value="lens">Lens</option>
+          </optgroup>
+        </select>
+        <svg class="icon icon--sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+      </div>
+    </div>
+    <div class="field">
+      <label class="field__label" for="preset">Preset</label>
+      <div class="select-wrap">
+        <select class="select" id="preset" aria-describedby="presetDesc">
+          <option value="custom" disabled>Custom</option>
+        </select>
+        <svg class="icon icon--sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+      </div>
+      <p class="ctl__hint" id="presetDesc"></p>
+    </div>
+    <div id="groups"></div>
+    <details class="group" id="renderGroup">
+      <summary>Rendering
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+      </summary>
+      <div class="group__body">
+        <fieldset class="seg">
+          <legend>Renderer</legend>
+          <div class="seg__options">
+            <label class="seg__option"><input type="radio" name="backend" value="webgl2" checked><span>WebGL2</span></label>
+            <label class="seg__option"><input type="radio" name="backend" value="webgpu" id="backendWebgpu"><span>WebGPU</span></label>
+          </div>
+          <p class="ctl__hint" id="backendHint"></p>
+        </fieldset>
+        <fieldset class="seg">
+          <legend>Frame copy</legend>
+          <div class="seg__options">
+            <label class="seg__option"><input type="radio" name="compositor" value="auto" checked><span>Auto</span></label>
+            <label class="seg__option"><input type="radio" name="compositor" value="direct"><span>Direct</span></label>
+            <label class="seg__option"><input type="radio" name="compositor" value="staging"><span>Staging</span></label>
+          </div>
+          <p class="ctl__hint">Staging reads the frame back from video memory once per frame. Auto turns it on in Firefox.</p>
+        </fieldset>
+        <div class="ctl">
+          <div class="ctl__top"><label class="ctl__label" for="renderScale">Render scale</label><output class="ctl__value" for="renderScale" id="renderScaleOut">100%</output></div>
+          <input class="range" type="range" id="renderScale" min="0.5" max="1" step="0.05" value="1">
+        </div>
+        <dl class="stats" aria-live="off">
+          <dt>Frames per second</dt><dd id="statFps">…</dd>
+          <dt>CPU per frame</dt><dd id="statCpu">…</dd>
+          <dt>Draw calls</dt><dd id="statDraws">…</dd>
+          <dt>Panes per frame</dt><dd id="statPanes">…</dd>
+          <dt>Renderer</dt><dd id="statMode">…</dd>
+          <dt>Copy method</dt><dd id="statComp">…</dd>
+          <dt>GPU</dt><dd id="statGpu">…</dd>
+        </dl>
+      </div>
+    </details>
+  </div>
+  <div class="settings__foot">
+    <div class="settings__actions">
+      <button class="btn btn--secondary" id="exportBtn" type="button">
+        <svg class="icon icon--sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+        Save .json
+      </button>
+      <button class="btn btn--secondary" id="importBtn" type="button">
+        <svg class="icon icon--sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+        Open .json
+      </button>
+      <input type="file" id="importInput" accept="application/json,.json" hidden>
+    </div>
+    <p class="settings__status" id="settingsStatus" role="status" aria-live="polite"></p>
+  </div>
+</aside>
+
+<script src="refractgl.js"></script>
+<script>
+(function () {
+  'use strict';
+  const LG = window.RefractGL;
+  const $ = (s) => document.querySelector(s);
+  const root = document.documentElement;
+  const css = (name) => getComputedStyle(root).getPropertyValue(name).trim();
+  const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+  const vp = () => ({ w: root.clientWidth || innerWidth, h: root.clientHeight || innerHeight });
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+
+  /* ---------------- Data ---------------- */
+
+  const PHOTOS = [
+    { id: '1519681393784-d120267933ba', name: 'Mountains at night' },
+    { id: '1477959858617-67f85cf4f1df', name: 'City from above' },
+    { id: '1493246507139-91e8fad9978e', name: 'Mountain lake' },
+    { id: '1514565131-fce0801e5785', name: 'Skyscrapers at dusk' },
+  ];
+  const photoUrl = (id, w) => 'https://images.unsplash.com/photo-' + id + '?w=' + w + '&q=80&auto=format';
+  const thumbUrl = (id) => 'https://images.unsplash.com/photo-' + id + '?w=96&h=96&fit=crop&q=60&auto=format';
+  const originalUrl = (id) => 'https://images.unsplash.com/photo-' + id;
+
+  // Starting look of every element: a built-in preset plus the bevel width that suits its size.
+  const LOOKS = {
+    header: { preset: 'ios', thickness: 10 },
+    hero: { preset: 'frosted', thickness: 20 },
+    command: { preset: 'ios', thickness: 12 },
+    dock: { preset: 'ios', thickness: 14 },
+    overlay: { preset: 'iosTinted', thickness: 10 },
+    tabbar: { preset: 'iosTinted', thickness: 14 },
+    tabLens: { preset: 'ios', thickness: 10 },
+    lens: { preset: 'lens', thickness: 40 },
+  };
+  // Lens materials from the chips: the magnifier and crystal want a deep bevel, glass a narrow lens edge.
+  const LENS_THICKNESS = { lens: 40, crystal: 40 };
+  const TARGETS = {
+    header: ['#brand', '#headerNav'], hero: ['#heroCard'],
+    command: ['#command'], dock: ['#dock'], overlay: ['#credit', '#tooltip'],
+    tabbar: ['#tabbar', '#autoBtn'], tabLens: ['#tabLens'], lens: ['#lens'],
+  };
+  const full = (p) => Object.assign({}, LG.DEFAULTS, LG.validateOptions(p).options);
+
+  /* ---------------- Glass ---------------- */
+
+  const mqTransparency = matchMedia('(prefers-reduced-transparency: reduce)');
+  const mqContrast = matchMedia('(prefers-contrast: more)');
+  const a11yOverride = () => (mqTransparency.matches || mqContrast.matches
+    ? { tint: 'rgba(22,22,23,0.88)', adaptive: 0, vibrancy: 0, blur: 24, edgeBlur: 8 } : null);
+
+  // Live states (grabbed, moving, solid) bend the element's own settings for a moment.
+  const flags = new Map();       // element -> Set of active states
+  const targetOf = new Map();    // element -> target key
+  function liveMods(el, s) {
+    const f = flags.get(el);
+    if (!f || !f.size) return null;
+    const m = {};
+    // Stronger refraction keeps its sign: iOS presets pull the outside in (negative values).
+    const bend = (d) => s.refraction + (s.refraction < 0 ? -d : d);
+    if (f.has('grab')) Object.assign(m, { zoom: s.zoom + 0.2, refraction: bend(0.3), specular: s.specular + 0.4 });
+    if (f.has('moving')) Object.assign(m, { zoom: Math.max(s.zoom, 1.25), blur: 0, edgeBlur: 0, tint: 'rgba(255,255,255,0.04)', brightness: s.brightness + 0.15, refraction: bend(0.4), specular: s.specular + 0.4 });
+    if (f.has('solid')) m.opacity = 0;   // header capsules over the solid scrolled header
+    return m;
+  }
+  // Panes with text: the demo picks light or dark for the pane and its text together and keeps the
+  // text readable (see updateTones), so the glass never settles where neither text colour reads.
+  const toneTint = new Map();    // element -> tint that replaces the preset one
+  const effective = (el) => {
+    const t = targetOf.get(el);
+    const tone = toneTint.has(el) ? { tint: toneTint.get(el), adaptive: 0 } : null;
+    return Object.assign({}, state[t], tone, a11yOverride(), liveMods(el, state[t]));
+  };
+  function setFlag(el, name, on, duration) {
+    const f = flags.get(el) || new Set();
+    if (on === f.has(name)) return;
+    if (on) f.add(name); else f.delete(name);
+    flags.set(el, f);
+    el.__refractgl.animate(effective(el), { duration: duration == null ? 240 : duration });
+  }
+
+  // Wallpaper sampling (see below); declared first because option changes update the glass tone.
+  let grid = null;         // photo sampled per cell: brightest and darkest pixel, mean
+  const state = {};
+  const glass = {};
+  for (const t of Object.keys(TARGETS)) {
+    state[t] = full(LOOKS[t]);
+    glass[t] = TARGETS[t].map((sel) => {
+      const el = $(sel);
+      targetOf.set(el, t);
+      return new LG(el, Object.assign({}, state[t], a11yOverride()));
+    });
+  }
+  const applyTarget = (t, animated) => glass[t].forEach((g) => {
+    const o = effective(g.element);
+    if (animated) g.animate(o, { duration: 360 }); else { g.stopAnimation(); g.setOptions(o); }
+    if (grid) updateTones();
+  });
+  const applyAll = () => Object.keys(TARGETS).forEach(applyTarget);
+  mqTransparency.addEventListener('change', applyAll);
+  mqContrast.addEventListener('change', applyAll);
+
+  /* ---------------- Wallpaper (also the glass backdrop) ---------------- */
+
+  const wall = $('#wallpaper');
+  const header = $('#header');
+  const wctx = wall.getContext('2d');
+  let photo = null;
+  LG.setBackdrop(wall, { dynamic: false });
+
+  const LIN = new Float32Array(256);
+  for (let i = 0; i < 256; i++) { const c = i / 255; LIN[i] = c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); }
+  const lum = (r, g, b) => 0.2126 * LIN[r] + 0.7152 * LIN[g] + 0.0722 * LIN[b];
+
+  // Wallpaper = the photo at full brightness, fixed to the viewport: no dim and no scrim. Text reads
+  // on glass instead (header capsules, hero card, panes): each pane picks its tone and the weakest
+  // tint at which its text passes WCAG over the photo right under it (see updateTones).
+
+  function drawCover(ctx, img, W, H, quality) {
+    const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height;
+    const k = Math.max(W / iw, H / ih);
+    ctx.imageSmoothingQuality = quality || 'high';
+    ctx.drawImage(img, (W - iw * k) / 2, (H - ih * k) / 2, iw * k, ih * k);
+  }
+  const rgbOf = (name, dflt) => (css(name) || dflt).trim().split(/[\s,]+/).map(Number);
+
+  // The photo sampled per cell (about 6 CSS px): brightest and darkest pixel, mean, and a summed-area
+  // table of the mean for blurred glass (see wallPixels). A generator: it pauses every 32 rows, so
+  // the next photo of the autoplay can be sampled in idle slices (gridLater) without a long task.
+  function* sampleSteps(img) {
+    const v = vp();
+    const SW = Math.max(1, Math.min(240, Math.round(v.w))), SH = Math.max(1, Math.round((SW * v.h) / v.w));
+    const FW = Math.max(SW, Math.min(Math.round(v.w), 2560)), FH = Math.max(SH, Math.round((FW * v.h) / v.w));
+    // The photo is drawn and read back one band of rows at a time: a full-frame getImageData is the
+    // one step that would otherwise block the main thread for tens of milliseconds.
+    const BAND = 32;
+    const c = document.createElement('canvas'); c.width = FW; c.height = BAND;
+    const x = c.getContext('2d', { willReadFrequently: true });
+    const solid = css('--media-solid');
+    const N = SW * SH, P = new Uint8Array(N * 3), Q = new Uint8Array(N * 3), M = new Float32Array(N * 3), cnt = new Uint32Array(N);
+    const best = new Float32Array(N).fill(-1), worst = new Float32Array(N).fill(2);
+    for (let y0 = 0; y0 < FH; y0 += BAND) {
+      const bh = Math.min(BAND, FH - y0);
+      x.setTransform(1, 0, 0, 1, 0, -y0);
+      x.fillStyle = solid; x.fillRect(0, y0, FW, bh);
+      // 'medium' on this CPU canvas: 'high' costs ten times more for the same brightness bounds.
+      if (img) drawCover(x, img, FW, FH, 'medium');
+      const src = x.getImageData(0, 0, FW, bh).data;
+      for (let yy = 0; yy < bh; yy++) {
+        const y = y0 + yy, row = Math.min(SH - 1, ((y * SH) / FH) | 0) * SW;
+        for (let xx = 0; xx < FW; xx++) {
+          const i = (yy * FW + xx) * 4, l = lum(src[i], src[i + 1], src[i + 2]);
+          const cI = row + Math.min(SW - 1, ((xx * SW) / FW) | 0);
+          M[cI * 3] += src[i]; M[cI * 3 + 1] += src[i + 1]; M[cI * 3 + 2] += src[i + 2]; cnt[cI]++;
+          if (l > best[cI]) { best[cI] = l; P[cI * 3] = src[i]; P[cI * 3 + 1] = src[i + 1]; P[cI * 3 + 2] = src[i + 2]; }
+          if (l < worst[cI]) { worst[cI] = l; Q[cI * 3] = src[i]; Q[cI * 3 + 1] = src[i + 1]; Q[cI * 3 + 2] = src[i + 2]; }
+        }
+      }
+      yield;
+    }
+    for (let i = 0; i < N; i++) { const n = Math.max(1, cnt[i]); M[i * 3] /= n; M[i * 3 + 1] /= n; M[i * 3 + 2] /= n; }
+    const S = new Float64Array((SW + 1) * (SH + 1) * 3);
+    for (let y = 0; y < SH; y++) {
+      let r = 0, g = 0, b = 0;
+      for (let xx = 0; xx < SW; xx++) {
+        const i = (y * SW + xx) * 3, o = ((y + 1) * (SW + 1) + xx + 1) * 3, up = o - (SW + 1) * 3;
+        r += M[i]; g += M[i + 1]; b += M[i + 2];
+        S[o] = S[up] + r; S[o + 1] = S[up + 1] + g; S[o + 2] = S[up + 2] + b;
+      }
+    }
+    return { SW, SH, k: SW / v.w, P, Q, M, S };
+  }
+  function sampleGrid(img) {
+    const it = sampleSteps(img);
+    let r;
+    do r = it.next(); while (!r.done);
+    return r.value;
+  }
+  // Cached per photo and viewport: autoplay and the crossfade reuse it.
+  const grids = new WeakMap();
+  const gridKey = () => { const v = vp(); return v.w + 'x' + v.h + ':' + css('--media-solid'); };
+  function gridFor(img) {
+    const key = gridKey(), had = img && grids.get(img);
+    if (had && had.key === key) return had.grid;
+    const g = sampleGrid(img);
+    if (img) grids.set(img, { key, grid: g });
+    return g;
+  }
+  const idle = (fn) => (window.requestIdleCallback ? requestIdleCallback(fn, { timeout: 2000 }) : setTimeout(() => fn({ timeRemaining: () => 8 }), 200));
+  function gridLater(img) {
+    const key = gridKey(), had = grids.get(img);
+    if (had && had.key === key) return;
+    const it = sampleSteps(img);
+    // At most about 10 ms per idle callback: a fully idle page grants 50 ms, and spending all of it
+    // would still be a long task for a tap that arrives meanwhile.
+    const step = (dl) => {
+      const end = performance.now() + 10;
+      let r;
+      do r = it.next(); while (!r.done && dl.timeRemaining() > 4 && performance.now() < end);
+      if (!r.done) { idle(step); return; }
+      const now = grids.get(img);
+      if (gridKey() === key && !(now && now.key === key)) grids.set(img, { key, grid: r.value });
+    };
+    idle(step);
+  }
+  // During a crossfade every pixel lies between the two photos: the brighter of the two brightest
+  // pixels and the darker of the two darkest bound it; the mean is the incoming photo's.
+  function mergeGrids(a, b) {
+    if (a === b || a.SW !== b.SW || a.SH !== b.SH) return b;
+    const P = new Uint8Array(b.P.length), Q = new Uint8Array(b.Q.length);
+    for (let i = 0; i < P.length; i += 3) {
+      const pa = lum(a.P[i], a.P[i + 1], a.P[i + 2]) >= lum(b.P[i], b.P[i + 1], b.P[i + 2]) ? a.P : b.P;
+      const qa = lum(a.Q[i], a.Q[i + 1], a.Q[i + 2]) <= lum(b.Q[i], b.Q[i + 1], b.Q[i + 2]) ? a.Q : b.Q;
+      P[i] = pa[i]; P[i + 1] = pa[i + 1]; P[i + 2] = pa[i + 2];
+      Q[i] = qa[i]; Q[i + 1] = qa[i + 1]; Q[i + 2] = qa[i + 2];
+    }
+    return Object.assign({}, b, { P, Q, pair: [a, b] });
+  }
+
+  // Paint the whole wallpaper (photo, viewport or fonts changed). It is static while scrolling:
+  // the photo is fixed to the viewport, so scrolling uploads nothing.
+  function paintWallpaper() {
+    const v = vp();
+    const dpr = Math.min(devicePixelRatio || 1, 2);
+    const W = Math.max(1, Math.round(v.w * dpr)), H = Math.max(1, Math.round(v.h * dpr));
+    grid = fade ? mergeGrids(gridFor(fade.from), gridFor(photo)) : gridFor(photo);
+    if (wall.width !== W) wall.width = W;
+    if (wall.height !== H) wall.height = H;
+    wctx.globalAlpha = 1;
+    wctx.fillStyle = css('--media-solid'); wctx.fillRect(0, 0, W, H);
+    if (photo) drawCover(wctx, photo, W, H);
+    LG.invalidateBackdrop();
+  }
+
+  // Crossfade (photo change). Both photos are drawn at the wallpaper's size once, so a frame is two
+  // plain copies; only the part that shows is repainted and uploaded: the hero, the playground window
+  // and the fixed glass on top, with a margin for refraction.
+  let fade = null;   // { from, a, b, t0, dur, raf }: a, b the outgoing and incoming photo at wallpaper size
+  function wallCopy(img) {
+    const c = document.createElement('canvas');
+    c.width = wall.width; c.height = wall.height;
+    const x = c.getContext('2d');
+    if (img) { x.fillStyle = css('--media-solid'); x.fillRect(0, 0, c.width, c.height); drawCover(x, img, c.width, c.height); }
+    else x.drawImage(wall, 0, 0);
+    return c;
+  }
+  function visibleWall() {
+    const v = vp(), k = wall.width / v.w, pad = 64;
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const el of [$('.hero'), $('#stage'), header, $('#tooltip'), $('#credit')]) {
+      if (el.hidden || (el.id === 'credit' && !el.matches(':popover-open'))) continue;
+      if (el === header && header.dataset.scrolled === 'true') continue;   // solid bar, capsules hidden
+      const b = el.getBoundingClientRect();
+      const l = Math.max(0, b.left - pad), t = Math.max(0, b.top - pad), r = Math.min(v.w, b.right + pad), btm = Math.min(v.h, b.bottom + pad);
+      if (r <= l || btm <= t) continue;
+      x0 = Math.min(x0, l); y0 = Math.min(y0, t); x1 = Math.max(x1, r); y1 = Math.max(y1, btm);
+    }
+    if (!(x1 > x0 && y1 > y0)) return null;
+    const X = Math.floor(x0 * k), Y = Math.floor(y0 * k);
+    return { x: X, y: Y, width: Math.min(wall.width, Math.ceil(x1 * k)) - X, height: Math.min(wall.height, Math.ceil(y1 * k)) - Y };
+  }
+  function fadeFrame(now) {
+    if (!fade) return;
+    fade.raf = 0;
+    if (fade.a.width !== wall.width || fade.a.height !== wall.height) { endFade(); return; }   // resized
+    if (!fade.t0) fade.t0 = now;
+    const t = clamp((now - fade.t0) / fade.dur, 0, 1), a = t * t * (3 - 2 * t);
+    const r = visibleWall();
+    if (r && r.width > 0 && r.height > 0) {
+      wctx.globalAlpha = 1;
+      wctx.drawImage(fade.a, r.x, r.y, r.width, r.height, r.x, r.y, r.width, r.height);
+      wctx.globalAlpha = a;
+      wctx.drawImage(fade.b, r.x, r.y, r.width, r.height, r.x, r.y, r.width, r.height);
+      wctx.globalAlpha = 1;
+      LG.invalidateBackdrop(r);
+    }
+    if (t < 1) fade.raf = requestAnimationFrame(fadeFrame);
+    else endFade();
+  }
+  function endFade() {
+    if (!fade) return;
+    if (fade.raf) cancelAnimationFrame(fade.raf);
+    fade = null;
+    paintWallpaper();
+    updateTones(240);
+    scheduleAuto();
+  }
+
+  // Glass tone: text on a pane turns dark over a light photo and light over a dark one, as on iOS.
+  // Over a busy spot the demo also adds the weakest neutral layer to the tint at which every text on
+  // the pane still passes WCAG (the legibility floor).
+  function cellRange(x0, y0, x1, y1) {
+    const g = grid, v = vp();
+    const cx0 = clamp(Math.floor(Math.max(0, x0) * g.k), 0, g.SW - 1), cx1 = clamp(Math.ceil(Math.min(v.w, x1) * g.k), cx0 + 1, g.SW);
+    const cy0 = clamp(Math.floor(Math.max(0, y0) * g.k), 0, g.SH - 1), cy1 = clamp(Math.ceil(Math.min(v.h, y1) * g.k), cy0 + 1, g.SH);
+    return [cx0, cy0, cx1, cy1];
+  }
+  function wallMean(x0, y0, x1, y1) {
+    const g = grid;
+    if (!g) return null;
+    const [cx0, cy0, cx1, cy1] = cellRange(x0, y0, x1, y1);
+    const sum = [0, 0, 0];
+    let n = 0;
+    for (let cy = cy0; cy < cy1; cy++) for (let cx = cx0; cx < cx1; cx++) {
+      const i = (cy * g.SW + cx) * 3;
+      sum[0] += g.M[i]; sum[1] += g.M[i + 1]; sum[2] += g.M[i + 2];
+      n++;
+    }
+    return n ? sum.map((c) => c / n / 255) : null;
+  }
+  // Mean of the cells within rc of a cell (summed-area table).
+  function windowMean(g, cx, cy, rc, out) {
+    const W1 = g.SW + 1, x0 = Math.max(0, cx - rc), x1 = Math.min(g.SW, cx + rc + 1), y0 = Math.max(0, cy - rc), y1 = Math.min(g.SH, cy + rc + 1);
+    const n = (x1 - x0) * (y1 - y0), S = g.S;
+    const a = (y1 * W1 + x1) * 3, b = (y0 * W1 + x1) * 3, c = (y1 * W1 + x0) * 3, d = (y0 * W1 + x0) * 3;
+    for (let ch = 0; ch < 3; ch++) out[ch] = (S[a + ch] - S[b + ch] - S[c + ch] + S[d + ch]) / n;
+    return out;
+  }
+  // Brightest (P) or darkest (Q) photo pixel of every cell under the rects. Under blurred glass
+  // (blur of 6 CSS px and more) a text pixel shows an average over at least the blur width, which can
+  // never exceed the brightest (or undercut the darkest) mean of the windows of that width around it:
+  // those window means are used instead, a far less pessimistic bound. Pad the rects accordingly.
+  const wm = [0, 0, 0], wm2 = [0, 0, 0];
+  function wallPixels(rects, key, blur) {
+    const g = grid, src = g[key], out = [];
+    const rc = blur >= 6 ? Math.floor((blur * g.k) / 2) : 0;
+    const bright = key === 'P';
+    for (const r of rects) {
+      const [cx0, cy0, cx1, cy1] = cellRange(r.x0, r.y0, r.x1, r.y1);
+      for (let cy = cy0; cy < cy1; cy++) for (let cx = cx0; cx < cx1; cx++) {
+        if (rc) {
+          let m = windowMean(g.pair ? g.pair[0] : g, cx, cy, rc, wm);
+          if (g.pair) {
+            const m2 = windowMean(g.pair[1], cx, cy, rc, wm2);
+            const l1 = dot3(m), l2 = dot3(m2);
+            if (bright ? l2 > l1 : l2 < l1) m = m2;
+          }
+          out.push(m[0], m[1], m[2]);
+        } else {
+          const i = (cy * g.SW + cx) * 3;
+          out.push(src[i], src[i + 1], src[i + 2]);
+        }
+      }
+    }
+    return out;
+  }
+  const W709 = [0.2126, 0.7152, 0.0722];
+  const dot3 = (a) => a[0] * W709[0] + a[1] * W709[1] + a[2] * W709[2];
+  const LIN_ON_LIGHT = (() => { const c = rgbOf('--on-light-rgb', '29 29 31'); return lum(c[0], c[1], c[2]); })();
+  const FLOOR_RGB = { light: 240, dark: 26 };   // neutral layer under dark text / under light text
+  // Text on each pane and the contrast it needs (labels 4.5, large title and icons 3). The small tab
+  // lens keeps more headroom: its rim and edge glow sit right next to the label.
+  const TEXT_ON = {
+    '#brand': [['#brand .wordmark__text', 4.5]],
+    '#headerNav': [['#headerNav .text-link', 4.5]],
+    '#heroCard': [['#heroCard .hero__title', 3], ['#heroCard .hero__lead, #heroCard .hero__note', 4.5]],
+    '#command': [['#snippet', 4.5], ['#copyBtn svg', 3]],
+    '#dock': [['#uploadBtn svg', 3], ['#creditBtn svg', 3]],
+    '#tabbar': [['#tabbar .tab[aria-checked="false"] span', 4.5], ['#tabbar .tab[aria-checked="false"] svg', 3]],
+    // The lens magnifies and refracts the photo under the selected tab, so its label needs more headroom.
+    '#tabLens': [['#tabbar .tab[aria-checked="true"] span', 4.5, 1.6], ['#tabbar .tab[aria-checked="true"] svg', 3, 1.6]],
+    '#autoBtn': [['#autoBtn svg', 3]],
+    '#credit': [['#credit .popover__title, #credit .popover__meta, #credit .popover__link', 4.5]],
+    '#tooltip': [['#tooltipText', 4.5]],
+  };
+  // One tint for "base tint, then a neutral layer of alpha b on top".
+  function stackTint(base, rgb, b) {
+    const A = 1 - (1 - base[3]) * (1 - b);
+    if (A <= 0) return { A: 0, T: [0, 0, 0] };
+    return { A, T: [0, 1, 2].map((c) => (b * rgb + (1 - b) * base[3] * base[c]) / A) };
+  }
+  // The shader's colour steps before the tint (saturation, contrast, brightness), once per pixel:
+  // r, g, b in 0…1 and the luma that vibrancy keeps the chroma around.
+  function preTint(px, o) {
+    const n = px.length / 3, out = new Float32Array(n * 4);
+    const sat = o.saturation, con = o.contrast, br = o.brightness;
+    for (let i = 0; i < n; i++) {
+      const r = px[i * 3] / 255, g = px[i * 3 + 1] / 255, b = px[i * 3 + 2] / 255;
+      const y = r * W709[0] + g * W709[1] + b * W709[2];
+      const f = (c) => clamp((((y + (c - y) * sat) - 0.5) * con + 0.5) * br, 0, 1);
+      const R = f(r), G = f(g), B = f(b);
+      out[i * 4] = R; out[i * 4 + 1] = G; out[i * 4 + 2] = B; out[i * 4 + 3] = R * W709[0] + G * W709[1] + B * W709[2];
+    }
+    return out;
+  }
+  function minRatio(pre, light, tint, vibrancy) {
+    const { A, T } = tint, k = 1 - A, v = A * vibrancy;
+    const t0 = (A * T[0]) / 255, t1 = (A * T[1]) / 255, t2 = (A * T[2]) / 255;
+    let min = Infinity;
+    for (let i = 0; i < pre.length; i += 4) {
+      const y = pre[i + 3];
+      const r = pre[i], g = pre[i + 1], b = pre[i + 2];
+      const l = lum(clamp(Math.round((r * k + t0 + (r - y) * v) * 255), 0, 255),
+        clamp(Math.round((g * k + t1 + (g - y) * v) * 255), 0, 255),
+        clamp(Math.round((b * k + t2 + (b - y) * v) * 255), 0, 255));
+      const q = light ? (l + 0.05) / (LIN_ON_LIGHT + 0.05) : 1.05 / (l + 0.05);
+      if (q < min) min = q;
+    }
+    return min;
+  }
+  // Weakest neutral layer (0…0.92) that keeps every text group at its contrast with a margin.
+  function floorFor(groups, tone, base, vibrancy) {
+    const light = tone === 'light';
+    const ok = (b) => {
+      const tint = stackTint(base, FLOOR_RGB[tone], b);
+      return groups.every((g) => minRatio(light ? g.dark : g.bright, light, tint, vibrancy) >= g.need * g.margin);
+    };
+    if (ok(0)) return 0;
+    let lo = 0, hi = 0.92;
+    if (!ok(hi)) return hi;
+    for (let i = 0; i < 7; i++) { const m = (lo + hi) / 2; if (ok(m)) hi = m; else lo = m; }
+    return Math.ceil(hi * 50) / 50;
+  }
+  // Panes that slide with the drawer on wide screens: their text is checked at both ends of the
+  // slide and halfway, so opening the drawer never needs a new tone.
+  const SLIDES = new Set(['#heroCard', '#command', '#dock']);
+  function slideOffsets(sel) {
+    if (!SLIDES.has(sel) || narrow.matches) return [0];
+    const w = drawer.offsetWidth / 2, open = drawer.dataset.open === 'true';
+    return open ? [0, w / 2, w] : [0, -w / 2, -w];
+  }
+  function paneLook(el, sel, o, forced) {
+    const r = el.getBoundingClientRect(), v = vp();
+    if (!r.width || !r.height || r.right <= 0 || r.bottom <= 0 || r.left >= v.w || r.top >= v.h) return null;
+    const m = Math.min(r.width, r.height) / 2, cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    const under = wallMean(r.left, r.top, r.right, r.bottom), around = wallMean(cx - m, cy - m, cx + m, cy + m);
+    if (!under || !around) return null;
+    const t = LG.parseColor(o.tint) || [1, 1, 1, 0];
+    const a = 1 / (1 + Math.exp(-16 * (dot3(around) - 0.42)));
+    const tl = dot3(t);
+    const tc = clamp(tl + (0.1 + 0.84 * a - tl) * o.adaptive, 0, 1);
+    const G = clamp((1 - t[3]) * Math.min(1, dot3(under) * o.brightness) + t[3] * tc, 0, 1);
+    const lg = lum(Math.round(G * 255), Math.round(G * 255), Math.round(G * 255));
+    const onWhite = 1.05 / (lg + 0.05), onDark = (lg + 0.05) / (LIN_ON_LIGHT + 0.05);
+    const cur = el.dataset.tone;
+    const meanTone = (cur === 'light' ? onDark * 1.15 >= onWhite : onDark > onWhite * 1.15) ? 'light' : 'dark';
+    // Adaptive presets: the same curve as the shader, pushed out of the middle on the side of the tone.
+    const baseFor = (tone) => {
+      if (!(o.adaptive > 0)) return [t[0] * 255, t[1] * 255, t[2] * 255, t[3]];
+      const L = (0.1 + 0.84 * (tone === 'light' ? Math.max(a, 0.9) : Math.min(a, 0.1))) * 255;
+      return [L, L, L, t[3]];
+    };
+    // The photo under a text, as the zoom of the glass pulls it toward the centre.
+    const z = Math.max(0.5, o.zoom || 1), blur = o.blur || 0, pad = blur >= 6 ? 2 * blur : 3;
+    const shifts = slideOffsets(sel);
+    const groups = (TEXT_ON[sel] || []).map(([q, need, margin]) => {
+      const rects = [];
+      for (const n of document.querySelectorAll(q)) {
+        const b = n.getBoundingClientRect();
+        if (!b.width || !b.height) continue;
+        for (const dx of shifts) rects.push({
+          x0: cx + (b.left - cx) / z - pad + dx, x1: cx + (b.right - cx) / z + pad + dx, y0: cy + (b.top - cy) / z - pad, y1: cy + (b.bottom - cy) / z + pad,
+        });
+      }
+      return rects.length ? { need, margin: margin || 1.15, bright: preTint(wallPixels(rects, 'P', blur), o), dark: preTint(wallPixels(rects, 'Q', blur), o) } : null;
+    }).filter(Boolean);
+    let tone = forced || meanTone, b = 0;
+    if (groups.length) {
+      const need = (tn) => floorFor(groups, tn, baseFor(tn), o.vibrancy || 0);
+      if (forced) b = need(tone);
+      else {
+        const bl = need('light'), bd = need('dark');
+        if (bl || bd) {
+          const keep = cur || meanTone, other = keep === 'light' ? 'dark' : 'light';
+          const bk = keep === 'light' ? bl : bd, bo = keep === 'light' ? bd : bl;
+          tone = bo < bk - 0.06 ? other : keep;
+        }
+        b = tone === 'light' ? bl : bd;
+      }
+    }
+    if (!(o.adaptive > 0) && !b) return { tone, tint: null };
+    const { A, T } = stackTint(baseFor(tone), FLOOR_RGB[tone], b);
+    return { tone, tint: 'rgba(' + T.map((c) => Math.round(c)).join(',') + ',' + A.toFixed(3) + ')' };
+  }
+  // The tab lens carries the selected label, so it takes the tab bar's tone. The header capsules fade
+  // out over the solid scrolled header, where their text is light on the dark bar.
+  const TONED = ['#brand', '#headerNav', '#heroCard', '#command', '#dock', '#tabbar', '#tabLens', '#autoBtn', '#credit', '#tooltip'];
+  const CAPSULES = new Set(['#brand', '#headerNav']);
+  // ms: also ease a tint change without a tone flip (the photo crossfades under the panes).
+  function updateTones(ms) {
+    const gpu = root.dataset.glass === 'gpu';
+    const solid = header.dataset.scrolled === 'true';
+    for (const sel of TONED) {
+      const el = $(sel);
+      if (!el || !el.__refractgl) continue;
+      const t = targetOf.get(el);
+      const forced = sel === '#tabLens' ? $('#tabbar').dataset.tone : null;
+      const res = !gpu || (solid && CAPSULES.has(sel)) ? { tone: 'dark', tint: null }
+        : paneLook(el, sel, Object.assign({}, state[t], a11yOverride()), forced);
+      if (!res) continue;
+      const had = !!el.dataset.tone, flipped = el.dataset.tone !== res.tone;
+      if (flipped) el.dataset.tone = res.tone;
+      const old = toneTint.get(el);
+      if (res.tint) toneTint.set(el, res.tint); else toneTint.delete(el);
+      if (toneTint.get(el) === old) continue;
+      const o = effective(el);
+      if ((flipped && had) || ms > 0) el.__refractgl.animate({ tint: o.tint, adaptive: o.adaptive }, { duration: ms > 0 ? ms : 240 });
+      else el.__refractgl.setOptions({ tint: o.tint, adaptive: o.adaptive });
+    }
+  }
+
+  /* ---------------- Photos ---------------- */
+
+  const photosEl = $('#photos');
+  const photoBtns = PHOTOS.map((p, i) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'dock__photo';
+    b.setAttribute('aria-pressed', 'false');
+    b.setAttribute('aria-label', 'Backdrop: ' + p.name);
+    b.dataset.tip = p.name;
+    const img = document.createElement('img');
+    img.src = thumbUrl(p.id); img.alt = ''; img.width = 48; img.height = 48; img.decoding = 'async';
+    b.append(img);
+    b.addEventListener('click', () => loadPhoto(i));
+    photosEl.append(b);
+    return b;
+  });
+
+  let loadToken = 0;
+  let objectUrl = null;
+  let current = { index: 0, name: PHOTOS[0].name, url: originalUrl(PHOTOS[0].id) };
+
+  function setCredit() {
+    $('#creditTitle').textContent = current.name;
+    $('#creditMeta').textContent = current.index >= 0 ? 'Photo: Unsplash' : 'Your photo, kept only in this tab';
+    const link = $('#creditLink');
+    link.hidden = current.index < 0;
+    if (current.index >= 0) link.href = current.url;
+  }
+
+  // Photos are decoded off the main thread into ImageBitmaps (createImageBitmap of the fetched file),
+  // so neither the first draw nor the sampling pays for decoding. The cache keeps the current and the
+  // next photo; the dock and autoplay share it. Older browsers fall back to <img> and decode().
+  const photoCache = new Map();   // 'index@width' -> Promise<ImageBitmap | HTMLImageElement>
+  function loadImg(url, priority) {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.decoding = 'async';
+    img.fetchPriority = priority;
+    img.src = url;
+    return img.decode().then(() => img);
+  }
+  function fetchPhoto(index, priority) {
+    const v = vp();
+    const w = Math.min(2400, Math.ceil((Math.max(v.w, v.h * 1.5) * Math.min(devicePixelRatio || 1, 2)) / 400) * 400);
+    const key = index + '@' + w, url = photoUrl(PHOTOS[index].id, w);
+    let p = photoCache.get(key);
+    if (!p) {
+      p = (window.createImageBitmap && window.fetch
+        ? fetch(url, { mode: 'cors', priority }).then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.blob(); }).then((b) => createImageBitmap(b))
+        : Promise.reject(new Error('no ImageBitmap'))
+      ).catch(() => loadImg(url, priority));
+      p.catch(() => photoCache.delete(key));   // a failed photo is fetched again next time
+      photoCache.set(key, p);
+    }
+    return p;
+  }
+  function trimPhotos(index) {
+    const keep = new Set([index, (index + 1) % PHOTOS.length]);
+    for (const k of photoCache.keys()) if (!keep.has(+k.split('@')[0])) photoCache.delete(k);
+  }
+
+  function setPhoto(img, meta) {
+    photo = img;
+    current = meta;
+    if (meta.index >= 0) trimPhotos(meta.index);
+    photoBtns.forEach((b, i) => b.setAttribute('aria-pressed', String(i === meta.index)));
+    setCredit();
+    if (statusEl.dataset.source === 'photo') hideStatus();
+  }
+  // Switch at once (first photo, the user's own photo, no photo yet to fade from).
+  function usePhoto(img, meta) {
+    if (fade) { if (fade.raf) cancelAnimationFrame(fade.raf); fade = null; }
+    setPhoto(img, meta);
+    paintWallpaper();
+    updateTones();
+    scheduleAuto();
+  }
+  // Crossfade from the current photo. While it runs, the text tone is checked against both photos.
+  function crossfade(img, meta, dur) {
+    if (fade) endFade();
+    const from = photo;
+    if (!from || from === img) { usePhoto(img, meta); return; }
+    setPhoto(img, meta);
+    fade = { from, a: wallCopy(null), b: wallCopy(img), t0: 0, dur: reduceMotion.matches ? 180 : dur, raf: 0 };
+    grid = mergeGrids(gridFor(from), gridFor(img));
+    updateTones(240);
+    fade.raf = requestAnimationFrame(fadeFrame);
+  }
+
+  // how: 'auto' for autoplay (quiet on errors, skipped once autoplay stops), otherwise a user pick.
+  function loadPhoto(index, how) {
+    const p = PHOTOS[index], auto = how === 'auto', token = ++loadToken;
+    clearTimeout(autoTimer);
+    if (!auto) photoBtns.forEach((b, i) => b.toggleAttribute('aria-busy', i === index));
+    fetchPhoto(index, auto ? 'low' : 'high').then((img) => {
+      if (token !== loadToken) return;
+      photoBtns[index].removeAttribute('aria-busy');
+      if (auto && !autoReady()) return;
+      crossfade(img, { index, name: p.name, url: originalUrl(p.id) }, auto ? 700 : 360);
+    }, () => {
+      if (token !== loadToken) return;
+      photoBtns[index].removeAttribute('aria-busy');
+      if (auto) scheduleAuto();   // try again on the next turn
+      else showStatus("The photo didn't load. Check your connection or upload your own photo.", () => loadPhoto(index));
+    });
+  }
+
+  const uploadInput = $('#uploadInput');
+  $('#uploadBtn').addEventListener('click', () => uploadInput.click());
+  uploadInput.addEventListener('change', () => {
+    const f = uploadInput.files && uploadInput.files[0];
+    uploadInput.value = '';
+    if (!f) return;
+    if (!/^image\//.test(f.type)) { showStatus("This file isn't an image. Choose a JPG, PNG or WebP file."); return; }
+    const url = URL.createObjectURL(f);
+    const img = new Image();
+    img.src = url;
+    ++loadToken;
+    img.decode().then(() => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      objectUrl = url;
+      setAuto(false);   // the user's own photo stays until they pick another
+      usePhoto(img, { index: -1, name: f.name, url: '' });
+    }, () => {
+      URL.revokeObjectURL(url);
+      showStatus("Couldn't open the image. Try another file.");
+    });
+  });
+
+  // Toolbar keyboard: arrows move focus between dock buttons.
+  const dock = $('#dock');
+  dock.addEventListener('keydown', (e) => {
+    const items = Array.from(dock.querySelectorAll('button'));
+    const i = items.indexOf(document.activeElement);
+    if (i < 0) return;
+    let j = -1;
+    if (e.key === 'ArrowRight') j = (i + 1) % items.length;
+    else if (e.key === 'ArrowLeft') j = (i - 1 + items.length) % items.length;
+    else if (e.key === 'Home') j = 0;
+    else if (e.key === 'End') j = items.length - 1;
+    if (j < 0) return;
+    e.preventDefault();
+    items[j].focus();
+  });
+
+  /* ---------------- Status (errors) ---------------- */
+
+  const statusEl = $('#status'), statusRetry = $('#statusRetry');
+  let retryFn = null;
+  function showStatus(text, retry, source) {
+    statusEl.dataset.source = source || 'photo';
+    $('#statusText').textContent = text;
+    retryFn = retry || null;
+    statusRetry.hidden = !retry;
+    statusEl.hidden = false;
+  }
+  function hideStatus() { statusEl.hidden = true; retryFn = null; }
+  statusRetry.addEventListener('click', () => { const f = retryFn; hideStatus(); if (f) f(); });
+  $('#statusClose').addEventListener('click', hideStatus);
+
+  /* ---------------- Popover ---------------- */
+
+  // Floating layers stay attached to their button. A button inside a fixed layer (header, drawer)
+  // keeps viewport coordinates; any other button (the dock, the code field) scrolls with the page,
+  // so its layer is positioned in document coordinates and the browser scrolls both together.
+  function anchorFrame(layer, el) {
+    let fixed = false;
+    for (let n = el; n && n !== document.body; n = n.parentElement) if (getComputedStyle(n).position === 'fixed') { fixed = true; break; }
+    layer.style.position = fixed ? 'fixed' : 'absolute';
+    return fixed ? { x: 0, y: 0 } : { x: scrollX, y: scrollY };
+  }
+
+  const credit = $('#credit'), creditBtn = $('#creditBtn');
+  function placeCredit() {
+    const o = anchorFrame(credit, creditBtn);
+    const r = creditBtn.getBoundingClientRect();
+    const v = vp();
+    const W = Math.min(288, v.w - 32);
+    const left = clamp(r.left + r.width / 2 - W / 2, 16, v.w - W - 16);
+    credit.style.left = (left + o.x) + 'px';
+    credit.style.bottom = (v.h - r.top - o.y + 12) + 'px';   // from the bottom of the first screen
+    credit.style.setProperty('--origin-x', (r.left + r.width / 2 - left) + 'px');
+  }
+  credit.addEventListener('beforetoggle', (e) => {
+    if (e.newState !== 'open') return;
+    hideTip();
+    placeCredit();
+  });
+  credit.addEventListener('toggle', (e) => { if (e.newState === 'open') updateTones(); });
+
+  /* ---------------- Tooltip ---------------- */
+
+  const tip = $('#tooltip'), tipText = $('#tooltipText');
+  let tipTimer = 0, tipHideTimer = 0, lastTipAt = 0, tipFor = null, tipPending = null;
+
+  function placeTip(el) {
+    const o = anchorFrame(tip, el);
+    const r = el.getBoundingClientRect();
+    const v = vp();
+    const tw = tip.offsetWidth, th = tip.offsetHeight;
+    let x = clamp(r.left + r.width / 2 - tw / 2, 8, v.w - tw - 8);
+    let y = r.top - th - 8;
+    if (y < 8) y = r.bottom + 8;
+    tip.style.transform = 'translate(' + Math.round(x + o.x) + 'px,' + Math.round(y + o.y) + 'px)';
+  }
+  function showTip(el) {
+    clearTimeout(tipHideTimer);
+    tipFor = el;
+    tipText.textContent = el.dataset.tip;
+    tip.hidden = false;
+    placeTip(el);
+    updateTones();
+  }
+  function hideTip() {
+    clearTimeout(tipTimer); clearTimeout(tipHideTimer);
+    tipPending = null;
+    if (!tip.hidden) lastTipAt = performance.now();
+    tip.hidden = true;
+    tipFor = null;
+  }
+  function queueTip(el) {
+    clearTimeout(tipTimer); clearTimeout(tipHideTimer);
+    if (credit.matches(':popover-open') && el === creditBtn) return;
+    const warm = !tip.hidden || performance.now() - lastTipAt < 1000;
+    tipPending = el;
+    if (warm) showTip(el); else tipTimer = setTimeout(() => showTip(el), 600);
+  }
+  const softHide = () => { clearTimeout(tipTimer); tipHideTimer = setTimeout(hideTip, 100); };
+  document.addEventListener('pointerover', (e) => {
+    const el = e.target.closest('[data-tip]');
+    if (!el || e.pointerType === 'touch' || el === tipFor || el === tipPending) return;
+    queueTip(el);
+  });
+  document.addEventListener('pointerout', (e) => {
+    const el = e.target.closest('[data-tip]');
+    if (el && !el.contains(e.relatedTarget) && !tip.contains(e.relatedTarget)) softHide();
+  });
+  tip.addEventListener('pointerenter', () => clearTimeout(tipHideTimer));
+  tip.addEventListener('pointerleave', softHide);
+  document.addEventListener('focusin', (e) => {
+    const el = e.target.closest && e.target.closest('[data-tip]');
+    if (el && el.matches(':focus-visible')) showTip(el); else hideTip();
+  });
+  document.addEventListener('focusout', (e) => { if (e.target.closest && e.target.closest('[data-tip]')) hideTip(); });
+  document.addEventListener('pointerdown', hideTip);
+
+  /* ---------------- Copy ---------------- */
+
+  const copyBtn = $('#copyBtn'), copyStatus = $('#copyStatus'), copyLive = $('#copyLive');
+  let copyTimer = 0;
+  copyBtn.addEventListener('click', async () => {
+    const text = $('#snippet').textContent;
+    let ok = false;
+    try { await navigator.clipboard.writeText(text); ok = true; } catch (e) {
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.append(ta); ta.select();
+      try { ok = document.execCommand('copy'); } catch (err) { ok = false; }
+      ta.remove();
+    }
+    clearTimeout(copyTimer);
+    if (ok) {
+      copyStatus.textContent = '';
+      copyBtn.dataset.copied = 'true';
+      copyLive.textContent = 'Code copied';
+      copyTimer = setTimeout(() => { copyBtn.dataset.copied = 'false'; copyLive.textContent = ''; }, 1600);
+    } else {
+      copyStatus.textContent = "Couldn't copy. Select the code and copy it by hand.";
+    }
+  });
+
+  /* ---------------- Settings drawer ---------------- */
+
+  const drawer = $('#settings'), toggle = $('#settingsToggle');
+  const narrow = matchMedia('(max-width: 899.98px)');
+  const command = $('#command');
+
+  const ty = (el) => { const t = getComputedStyle(el).transform; return t && t !== 'none' ? new DOMMatrixReadOnly(t).m42 : 0; };
+  // Small screens: the sheet covers the lower half, so the command field and the dock move above it.
+  function mobileShifts() {
+    if (!narrow.matches || drawer.dataset.open !== 'true') {
+      root.style.removeProperty('--cmd-shift-y');
+      root.style.removeProperty('--dock-shift-y');
+      return;
+    }
+    const v = vp();
+    const sheetTop = v.h - drawer.offsetHeight;
+    const cTop = command.getBoundingClientRect().top - ty(command);
+    const dBottom = dock.getBoundingClientRect().bottom - ty(dock);
+    root.style.setProperty('--cmd-shift-y', Math.round(header.offsetHeight + 16 - cTop) + 'px');
+    root.style.setProperty('--dock-shift-y', Math.round(Math.min(0, sheetTop - 12 - dBottom)) + 'px');
+  }
+
+  let toneTimer = 0;
+  function tonesLater(ms) { clearTimeout(toneTimer); toneTimer = setTimeout(updateTones, ms); }
+
+  // Opened from the keyboard, focus moves to the drawer title; a mouse or touch open leaves focus alone.
+  function setDrawer(open, keyboard) {
+    if (open && credit.matches(':popover-open')) credit.hidePopover();   // the dock it points at slides away
+    drawer.dataset.open = String(open);
+    toggle.setAttribute('aria-expanded', String(open));
+    document.body.dataset.settings = open ? 'open' : 'closed';
+    if (open) {
+      mobileShifts();
+      if (keyboard) $('#settingsTitle').focus({ preventScroll: true });
+    } else if (drawer.contains(document.activeElement) || document.activeElement === document.body) {
+      toggle.focus({ preventScroll: true });
+    }
+    tonesLater(reduceMotion.matches ? 50 : 480);   // panes move with the drawer, the photo stays
+  }
+  toggle.addEventListener('click', (e) => setDrawer(drawer.dataset.open !== 'true', e.detail === 0));
+  $('#settingsClose').addEventListener('click', () => setDrawer(false));
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    if (!tip.hidden) { hideTip(); return; }
+    if (credit.matches(':popover-open')) return;   // the popover closes itself
+    if (!statusEl.hidden) { hideStatus(); return; }
+    if (drawer.dataset.open === 'true') setDrawer(false);
+  });
+
+  /* ---------------- Controls from RefractGL.SCHEMA ---------------- */
+
+  const targetSel = $('#target');
+  let target = targetSel.value;
+  const controls = {};
+  const nf = (d) => new Intl.NumberFormat('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+  const decimals = (step) => (step >= 1 ? 0 : step >= 0.1 ? 1 : 2);
+  const UNIT = { px: '\u00a0px', '°': '°', '×': '×', '': '' };
+  const fmt = (spec, v) => nf(decimals(spec.step)).format(v) + UNIT[spec.unit];
+  const toHex = (c) => '#' + c.slice(0, 3).map((x) => Math.round(x * 255).toString(16).padStart(2, '0')).join('');
+  const setFill = (input) => {
+    const min = +input.min, max = +input.max;
+    input.style.setProperty('--p', (((+input.value - min) / (max - min)) * 100).toFixed(2) + '%');
+  };
+  const chevron = '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
+
+  function makeRange(id, min, max, step) {
+    const r = document.createElement('input');
+    r.type = 'range'; r.className = 'range'; r.id = id;
+    r.min = min; r.max = max; r.step = step;
+    return r;
+  }
+
+  function buildControl(spec) {
+    const id = 'o-' + spec.key;
+    const wrap = document.createElement('div');
+    wrap.className = 'ctl';
+    const top = document.createElement('div');
+    top.className = 'ctl__top';
+    const label = document.createElement('label');
+    label.className = 'ctl__label'; label.htmlFor = id; label.textContent = spec.label;
+    const out = document.createElement('output');
+    out.className = 'ctl__value'; out.htmlFor = id;
+    top.append(label, out);
+    wrap.append(top);
+    const c = { spec, out };
+    let hint = null;
+    if (spec.hint) {
+      hint = document.createElement('p');
+      hint.className = 'ctl__hint'; hint.id = id + '-hint'; hint.textContent = spec.hint;
+    }
+    if (spec.type === 'color') {
+      const row = document.createElement('div'); row.className = 'ctl__row';
+      const sw = document.createElement('input');
+      sw.type = 'color'; sw.className = 'swatch'; sw.id = id;
+      row.append(sw);
+      c.swatch = sw;
+      if (spec.key === 'tint') {
+        const a = makeRange(id + '-a', 0, 1, 0.01);
+        a.setAttribute('aria-label', 'Tint density');
+        row.append(a);
+        c.alpha = a;
+        a.addEventListener('input', () => commitColor(c));
+      }
+      sw.addEventListener('input', () => commitColor(c));
+      wrap.append(row);
+    } else if (spec.type === 'length') {
+      const row = document.createElement('div'); row.className = 'ctl__row';
+      const r = makeRange(id, spec.min, Math.min(spec.max, 100), spec.step);
+      const chk = document.createElement('label'); chk.className = 'check';
+      const cb = document.createElement('input'); cb.type = 'checkbox'; cb.id = id + '-auto';
+      chk.append(cb, document.createTextNode('From CSS'));
+      row.append(r, chk);
+      c.range = r; c.auto = cb;
+      r.addEventListener('input', () => commit(spec.key, +r.value));
+      cb.addEventListener('change', () => {
+        const el = glass[target][0].element;
+        const px = parseFloat(getComputedStyle(el).borderTopLeftRadius) || 0;
+        commit(spec.key, cb.checked ? 'auto' : Math.round(Math.min(px, +r.max)));
+      });
+      wrap.append(row);
+    } else {
+      const r = makeRange(id, spec.min, spec.max, spec.step);
+      c.range = r;
+      r.addEventListener('input', () => commit(spec.key, +r.value));
+      wrap.append(r);
+    }
+    if (hint) {
+      (c.range || c.swatch).setAttribute('aria-describedby', hint.id);
+      wrap.append(hint);
+    }
+    controls[spec.key] = c;
+    return wrap;
+  }
+
+  function commit(key, value) {
+    state[target][key] = value;
+    applyTarget(target);
+    syncControl(controls[key]);
+    syncPreset();
+  }
+
+  const presetSel = $('#preset'), presetDesc = $('#presetDesc');
+  for (const p of Object.values(LG.PRESETS)) presetSel.append(new Option(p.label, p.id));
+  function syncPreset() {
+    const id = LG.matchPreset(state[target]);
+    presetSel.value = id || 'custom';
+    syncChips();
+    presetDesc.textContent = id ? LG.PRESETS[id].description : 'Values changed by hand. Pick a preset to start from it.';
+  }
+  presetSel.addEventListener('change', () => {
+    if (!LG.PRESETS[presetSel.value]) return;
+    Object.assign(state[target], LG.preset(presetSel.value));
+    applyTarget(target, true);
+    syncControls();
+    setStatus('');
+  });
+  function commitColor(c) {
+    const hex = c.swatch.value;
+    const n = parseInt(hex.slice(1), 16);
+    const a = c.alpha ? +c.alpha.value : 1;
+    const v = c.alpha ? 'rgba(' + (n >> 16 & 255) + ',' + (n >> 8 & 255) + ',' + (n & 255) + ',' + a + ')' : hex;
+    commit(c.spec.key, v);
+  }
+
+  function syncControl(c) {
+    const spec = c.spec, v = state[target][spec.key];
+    if (spec.type === 'color') {
+      const col = LG.parseColor(v) || [1, 1, 1, 1];
+      c.swatch.value = toHex(col);
+      if (c.alpha) {
+        c.alpha.value = col[3]; setFill(c.alpha);
+        c.out.textContent = nf(0).format(col[3] * 100) + '%';
+      } else c.out.textContent = toHex(col).toUpperCase();
+    } else if (spec.type === 'length') {
+      const auto = v === 'auto';
+      c.auto.checked = auto;
+      c.range.disabled = auto;
+      if (!auto) c.range.value = v;
+      else {
+        const px = parseFloat(getComputedStyle(glass[target][0].element).borderTopLeftRadius) || 0;
+        c.range.value = Math.min(px, +c.range.max);
+      }
+      setFill(c.range);
+      c.out.textContent = auto ? 'from CSS' : fmt(spec, v);
+    } else {
+      c.range.value = v; setFill(c.range);
+      c.out.textContent = fmt(spec, v);
+    }
+  }
+  const syncControls = () => { Object.values(controls).forEach(syncControl); syncPreset(); };
+
+  const groupsEl = $('#groups');
+  LG.GROUPS.forEach((g, gi) => {
+    const det = document.createElement('details');
+    det.className = 'group';
+    det.open = gi === 0;
+    const sum = document.createElement('summary');
+    sum.innerHTML = '<span></span>' + chevron;
+    sum.firstChild.textContent = g.label;
+    const body = document.createElement('div');
+    body.className = 'group__body';
+    LG.SCHEMA.filter((s) => s.group === g.id).forEach((s) => body.append(buildControl(s)));
+    det.append(sum, body);
+    groupsEl.append(det);
+  });
+  targetSel.addEventListener('change', () => {
+    target = targetSel.value;
+    syncControls();
+    setStatus('');
+    // Bring the element into view when it is off screen, so changes are visible right away.
+    const el = glass[target][0].element, r = el.getBoundingClientRect(), v = vp();
+    if (el.isConnected && r.width && (r.bottom < 0 || r.top > v.h)) el.scrollIntoView({ block: 'center', behavior: reduceMotion.matches ? 'auto' : 'smooth' });
+  });
+  syncControls();
+
+  /* ---------------- Render settings & stats ---------------- */
+
+  const settingsStatus = $('#settingsStatus');
+  const alertIcon = '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>';
+  let gpuError = false;
+  function setStatus(text, kind) {
+    gpuError = false;
+    settingsStatus.dataset.kind = kind || '';
+    if (!text) { settingsStatus.textContent = ''; return; }
+    settingsStatus.innerHTML = kind === 'error' && text ? alertIcon : '';
+    const span = document.createElement('span');
+    span.textContent = text;
+    settingsStatus.append(span);
+  }
+
+  const webgpuRadio = $('#backendWebgpu'), backendHint = $('#backendHint');
+  if (!navigator.gpu) { webgpuRadio.disabled = true; backendHint.textContent = "WebGPU isn't available in this browser."; }
+  document.querySelectorAll('input[name="backend"]').forEach((r) => r.addEventListener('change', () => {
+    backendHint.textContent = r.value === 'webgpu' ? 'Starting WebGPU…' : '';
+    LG.configure({ backend: r.value });
+  }));
+  document.querySelectorAll('input[name="compositor"]').forEach((r) => r.addEventListener('change', () => LG.configure({ compositor: r.value })));
+  const scale = $('#renderScale'), scaleOut = $('#renderScaleOut');
+  const syncScale = () => { setFill(scale); scaleOut.textContent = nf(0).format(scale.value * 100) + '%'; };
+  scale.addEventListener('input', () => { LG.configure({ renderScale: +scale.value }); syncScale(); });
+  function syncRenderControls() {
+    const cfg = LG.getConfig();
+    const b = document.querySelector('input[name="backend"][value="' + (cfg.backend === 'auto' ? 'webgpu' : cfg.backend) + '"]');
+    if (b && !b.disabled) b.checked = true;
+    const c = document.querySelector('input[name="compositor"][value="' + cfg.compositor + '"]');
+    if (c) c.checked = true;
+    scale.value = clamp(cfg.renderScale, 0.5, 1);
+    syncScale();
+  }
+  syncRenderControls();
+
+  const NAMES = { webgl2: 'WebGL2', webgpu: 'WebGPU' };
+  const COMP = { direct: 'Direct', staging: 'Staging' };
+  function onMode(m) {
+    root.dataset.glass = m.mode;
+    if (m.mode === 'gpu') {
+      const wanted = LG.getConfig().backend;
+      if (wanted !== 'webgl2' && m.backend === 'webgl2') {
+        backendHint.textContent = "WebGPU didn't start, so WebGL2 is running.";
+        document.querySelector('input[name="backend"][value="webgl2"]').checked = true;
+      } else backendHint.textContent = navigator.gpu ? '' : backendHint.textContent;
+      if (gpuError) { setStatus(''); if (statusEl.dataset.source === 'gpu') hideStatus(); }
+    } else if (m.mode === 'unsupported') {
+      const msg = "WebGL2 isn't available, so the glass isn't drawn. Turn on hardware acceleration in your browser settings.";
+      setStatus(msg, 'error');
+      showStatus(msg, null, 'gpu');
+      gpuError = true;
+    }
+    renderStats(LG.getStats());
+  }
+  LG.on('mode', onMode);
+  const ms = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  function renderStats(s) {
+    $('#fpsBadge').textContent = s.fps ? Math.round(s.fps) + ' FPS' : '';
+    $('#statFps').textContent = s.fps ? nf(0).format(s.fps) : '…';
+    $('#statCpu').textContent = ms.format(s.cpuMs) + '\u00a0ms';
+    $('#statDraws').textContent = String(s.drawCalls);
+    $('#statPanes').textContent = String(s.panes);
+    $('#statMode').textContent = s.mode === 'gpu' ? NAMES[s.backend] : s.mode === 'pending' ? 'Starting…' : s.mode === 'unsupported' ? 'Unavailable' : '…';
+    $('#statComp').textContent = COMP[s.compositor] || '…';
+    $('#statGpu').textContent = s.gpu || 'Not reported by the browser';
+  }
+  LG.on('stats', renderStats);
+  // The engine may have settled before these listeners existed.
+  if (LG.mode === 'unsupported' || LG.mode === 'gpu') onMode({ mode: LG.mode, backend: LG.getStats().backend });
+
+  /* ---------------- Export / import ---------------- */
+
+  const plural = (n, one, many) => (n === 1 ? one : many);
+
+  $('#exportBtn').addEventListener('click', () => {
+    const json = LG.exportJSON({ presets: state, config: LG.getConfig() });
+    const blob = new Blob([json], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'refractgl-settings.json';
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    setStatus('Saved to refractgl-settings.json: ' + Object.keys(state).length + ' ' + plural(Object.keys(state).length, 'element', 'elements') + ' and render settings.');
+  });
+
+  const ERRORS = {
+    'invalid-json': "The file doesn't read as JSON. Choose a file saved with Save .json.",
+    'invalid-format': 'The file has no RefractGL settings. Choose another file.',
+    'unsupported-version': 'The file was saved by a newer release of the library. Update refractgl.js.',
+    empty: "The file has no known settings. Check that it's a RefractGL file.",
+  };
+  function importText(text) {
+    let doc;
+    try { doc = LG.parseJSON(text); } catch (e) {
+      setStatus(ERRORS[e.code] || "Couldn't read the file.", 'error');
+      return false;
+    }
+    const clamped = doc.warnings.filter((w) => w.code === 'clamped').length;
+    let applied = 0, skipped = doc.warnings.length - clamped;
+    if (doc.presets) {
+      for (const name of Object.keys(doc.presets)) {
+        if (!state[name]) { skipped++; continue; }
+        state[name] = Object.assign({}, LG.DEFAULTS, doc.presets[name]);
+        applyTarget(name, true); applied++;
+      }
+    }
+    if (doc.options) { Object.assign(state[target], doc.options); applyTarget(target, true); applied++; }
+    if (doc.config) { LG.configure(doc.config); syncRenderControls(); }
+    syncControls();
+    let msg = applied
+      ? 'Applied to ' + applied + ' ' + plural(applied, 'element', 'elements') + '.'
+      : 'Render settings applied.';
+    if (clamped) msg += ' Clamped to the allowed range: ' + clamped + '.';
+    if (skipped) msg += ' Skipped unknown or invalid fields: ' + skipped + '.';
+    setStatus(msg);
+    return true;
+  }
+  const importInput = $('#importInput');
+  $('#importBtn').addEventListener('click', () => importInput.click());
+  importInput.addEventListener('change', async () => {
+    const f = importInput.files && importInput.files[0];
+    importInput.value = '';
+    if (!f) return;
+    if (f.size > 1024 * 1024) { setStatus("The file is over 1 MB. That doesn't look like a settings file.", 'error'); return; }
+    importText(await f.text());
+  });
+
+  $('#resetBtn').addEventListener('click', () => {
+    state[target] = full(LOOKS[target]);
+    applyTarget(target, true);
+    syncControls();
+    setStatus('Reset to defaults: ' + targetSel.selectedOptions[0].textContent + '.');
+  });
+
+  /* ---------------- Playground ---------------- */
+
+  const stage = $('#stage');
+  const fine = matchMedia('(hover: hover) and (pointer: fine)');
+  const motionOK = () => !reduceMotion.matches;
+  let stageVisible = false;
+  new IntersectionObserver((es) => { stageVisible = es[es.length - 1].isIntersecting; wake(); scheduleAuto(); }, { rootMargin: '64px' }).observe(stage);
+
+  // Photo autoplay: while the playground is on screen the four photos take turns, 5 s each with a
+  // 0.7 s crossfade. The button above the lens pauses it. Reduced motion and Save-Data start paused;
+  // a hidden tab, the playground off screen and the user's own photo hold it.
+  const AUTO_MS = 5000;
+  const autoBtn = $('#autoBtn');
+  const saveData = () => !!(navigator.connection && navigator.connection.saveData);
+  let autoOn = !(reduceMotion.matches || saveData());
+  let autoTimer = 0;
+  const autoReady = () => autoOn && stageVisible && !document.hidden;
+  function scheduleAuto() {
+    clearTimeout(autoTimer);
+    autoTimer = 0;
+    if (!autoReady() || fade || !photo || current.index < 0) return;
+    const next = (current.index + 1) % PHOTOS.length;
+    // Fetch and sample the next photo ahead, so the switch itself costs one crossfade.
+    fetchPhoto(next, 'low').then(gridLater, () => {});
+    autoTimer = setTimeout(() => { autoTimer = 0; loadPhoto(next, 'auto'); }, AUTO_MS);
+  }
+  function setAuto(on) {
+    autoOn = on;
+    const label = on ? 'Pause slideshow' : 'Play slideshow';
+    autoBtn.dataset.playing = String(on);
+    autoBtn.setAttribute('aria-label', label);
+    autoBtn.dataset.tip = label;
+    if (tipFor === autoBtn) { tipText.textContent = label; placeTip(autoBtn); }
+    if (!on) { clearTimeout(autoTimer); autoTimer = 0; }
+  }
+  // Play shows the next photo right away; Pause keeps the current one.
+  autoBtn.addEventListener('click', () => {
+    setAuto(!autoOn);
+    if (autoOn) loadPhoto((current.index + 1) % PHOTOS.length, 'auto');
+  });
+  reduceMotion.addEventListener('change', () => { if (reduceMotion.matches) setAuto(false); });
+  document.addEventListener('visibilitychange', () => scheduleAuto());
+  setAuto(autoOn);
+
+  // Tab bar: a liquid lens follows the pointer with a spring and settles on the chosen tab.
+  const tabbar = $('#tabbar'), tabLens = $('#tabLens');
+  const tabs = Array.from(tabbar.querySelectorAll('.tab'));
+  let tabSel = tabs.findIndex((t) => t.getAttribute('aria-checked') === 'true');
+  const spring = { x: 0, v: 0, goal: 0, sx: 1, sy: 1, ready: false, last: 0, hover: false, settled: true };
+  const tabX = (i) => tabs[i].offsetLeft;
+  function selectTab(i, focus) {
+    tabSel = i;
+    tabs.forEach((t, k) => { t.setAttribute('aria-checked', String(k === i)); t.tabIndex = k === i ? 0 : -1; });
+    if (focus) tabs[i].focus();
+    if (!spring.hover) aimLens(tabX(i));
+    if (spring.settled) updateTones();
+  }
+  function aimLens(x) {
+    spring.goal = x;
+    if (!spring.ready || !motionOK()) { spring.x = x; spring.v = 0; spring.ready = true; drawLens(); return; }
+    spring.settled = false;
+    wake();
+  }
+  function drawLens() {
+    tabLens.style.translate = spring.x.toFixed(2) + 'px 0';
+    tabLens.style.scale = spring.sx.toFixed(3) + ' ' + spring.sy.toFixed(3);
+  }
+  function stepLens(dt) {
+    if (spring.settled) return false;
+    const k = 420, c = 34;                         // stiffness, damping (per second)
+    const a = k * (spring.goal - spring.x) - c * spring.v;
+    spring.v += a * dt; spring.x += spring.v * dt;
+    const speed = Math.min(1, Math.abs(spring.v) / 1600);
+    const grow = spring.hover ? 0.12 : 0;
+    spring.sx = 1 + grow + speed * 0.28; spring.sy = 1 + grow - speed * 0.12;
+    const moving = Math.abs(spring.v) > 40 || Math.abs(spring.goal - spring.x) > 1.5 || spring.hover;
+    if (!moving && flags.get(tabLens) && flags.get(tabLens).has('moving')) updateTones();   // settling: tone for the new spot
+    setFlag(tabLens, 'moving', moving, moving ? 160 : 420);
+    if (!moving && Math.abs(spring.v) < 2) {
+      spring.x = spring.goal; spring.v = 0; spring.sx = 1; spring.sy = 1; spring.settled = true;
+    }
+    drawLens();
+    return !spring.settled;
+  }
+  tabs.forEach((t, i) => t.addEventListener('click', () => selectTab(i)));
+  tabbar.addEventListener('keydown', (e) => {
+    const n = tabs.length;
+    let j = -1;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') j = (tabSel + 1) % n;
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') j = (tabSel - 1 + n) % n;
+    else if (e.key === 'Home') j = 0;
+    else if (e.key === 'End') j = n - 1;
+    if (j < 0) return;
+    e.preventDefault();
+    selectTab(j, true);
+  });
+  const lensGoalFromPointer = (e) => {
+    const r = tabbar.getBoundingClientRect(), w = tabs[0].offsetWidth;
+    return clamp(e.clientX - r.left - w / 2, tabX(0), tabX(tabs.length - 1));
+  };
+  tabbar.addEventListener('pointermove', (e) => {
+    if (e.pointerType === 'touch' && !e.buttons) return;
+    spring.hover = true;
+    aimLens(lensGoalFromPointer(e));
+  });
+  tabbar.addEventListener('pointerdown', (e) => { if (e.pointerType === 'touch') { spring.hover = true; aimLens(lensGoalFromPointer(e)); } });
+  const leaveBar = () => { spring.hover = false; aimLens(tabX(tabSel)); };
+  tabbar.addEventListener('pointerleave', leaveBar);
+  tabbar.addEventListener('pointerup', (e) => { if (e.pointerType === 'touch') leaveBar(); });
+  tabbar.addEventListener('pointercancel', leaveBar);
+
+  // Material chips: switch the lens between a few presets (the drawer stays in sync through syncPreset).
+  function syncChips() {
+    const id = LG.matchPreset(state.lens);
+    document.querySelectorAll('input[name="lensMat"]').forEach((r) => { r.checked = r.value === id; });
+  }
+  document.querySelectorAll('input[name="lensMat"]').forEach((r) => r.addEventListener('change', () => {
+    if (!r.checked) return;
+    Object.assign(state.lens, LG.preset(r.value), { thickness: LENS_THICKNESS[r.value] || 16 });
+    applyTarget('lens', true);
+    if (target === 'lens') syncControls(); else syncChips();
+  }));
+
+  // Lens: drag with mouse, pen or finger; arrows move it from the keyboard. Position is kept as a fraction.
+  const lens = $('#lens');
+  const lensPos = { fx: 0.6, fy: 0.42 };
+  let grab = null;
+  const lensFree = () => [Math.max(1, stage.clientWidth - lens.offsetWidth), Math.max(1, stage.clientHeight - lens.offsetHeight)];
+  function placeLens() {
+    const [w, h] = lensFree();
+    lens.style.translate = (lensPos.fx * w).toFixed(1) + 'px ' + (lensPos.fy * h).toFixed(1) + 'px';
+  }
+  lens.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    lens.setPointerCapture(e.pointerId);
+    grab = { id: e.pointerId, x: e.clientX, y: e.clientY, fx: lensPos.fx, fy: lensPos.fy };
+    lens.dataset.grabbed = 'true';
+    setFlag(lens, 'grab', true, 200);
+  });
+  lens.addEventListener('pointermove', (e) => {
+    if (!grab || e.pointerId !== grab.id) return;
+    const [w, h] = lensFree();
+    lensPos.fx = clamp(grab.fx + (e.clientX - grab.x) / w, 0, 1);
+    lensPos.fy = clamp(grab.fy + (e.clientY - grab.y) / h, 0, 1);
+    placeLens();
+  });
+  const drop_ = (e) => {
+    if (!grab || (e && e.pointerId !== grab.id)) return;
+    grab = null;
+    lens.dataset.grabbed = 'false';
+    setFlag(lens, 'grab', false, 360);
+  };
+  lens.addEventListener('pointerup', drop_);
+  lens.addEventListener('pointercancel', drop_);
+  lens.addEventListener('lostpointercapture', drop_);
+  lens.addEventListener('keydown', (e) => {
+    const step = e.shiftKey ? 64 : 16;
+    const d = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
+    if (!d) return;
+    e.preventDefault();
+    const [w, h] = lensFree();
+    lensPos.fx = clamp(lensPos.fx + (d[0] * step) / w, 0, 1);
+    lensPos.fy = clamp(lensPos.fy + (d[1] * step) / h, 0, 1);
+    placeLens();
+  });
+
+  // One loop for the tab lens; it sleeps when nothing moves.
+  let loopId = 0, lastT = 0;
+  function loop(t) {
+    loopId = 0;
+    const dt = lastT ? Math.min(0.05, (t - lastT) / 1000) : 0;
+    lastT = t;
+    const more = stepLens(dt);
+    if (more) loopId = requestAnimationFrame(loop); else lastT = 0;
+  }
+  function wake() { if (!loopId) { lastT = 0; loopId = requestAnimationFrame(loop); } }
+  document.addEventListener('visibilitychange', wake);
+
+  function layoutPlay() {
+    spring.ready = false;
+    aimLens(tabX(tabSel));
+    placeLens();
+  }
+  layoutPlay();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(layoutPlay);
+
+  /* ---------------- Page chrome ---------------- */
+
+  // The panes move over the fixed photo: their text tone is re-checked once per frame.
+  let scrollFrame = 0;
+  let scrolled = null;
+  const onScroll = () => {
+    const now = scrollY > 8;
+    if (now !== scrolled) {
+      // Over the solid scrolled header the capsules fade out and their text sits on the bar.
+      scrolled = now;
+      header.dataset.scrolled = String(now);
+      for (const el of glass.header.map((g) => g.element)) setFlag(el, 'solid', now, 240);
+    }
+    if (scrollFrame) return;
+    scrollFrame = requestAnimationFrame(() => { scrollFrame = 0; updateTones(); });
+  };
+  addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+
+  const snippet = $('#snippet');
+  const checkOverflow = () => { snippet.dataset.overflow = String(snippet.scrollWidth > snippet.clientWidth + 1); };
+  checkOverflow();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(checkOverflow);
+
+  let resizeTimer = 0;
+  addEventListener('resize', () => {
+    hideTip();
+    if (credit.matches(':popover-open')) placeCredit();
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => { checkOverflow(); mobileShifts(); layoutPlay(); paintWallpaper(); if (credit.matches(':popover-open')) placeCredit(); updateTones(); }, 150);
+  });
+  narrow.addEventListener('change', () => mobileShifts());
+
+  paintWallpaper();
+  loadPhoto(0);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { paintWallpaper(); updateTones(); });
+
+  // Handle for automated checks and for poking at the demo from DevTools.
+  window.refractglDemo = {
+    state, glass, importText, paintWallpaper, updateTones,
+    autoplay: (on) => { if (on != null) { setAuto(!!on); scheduleAuto(); } return autoOn; },
+    photo: () => current.index,
+  };
+})();
+</script>
+</body>
+</html>

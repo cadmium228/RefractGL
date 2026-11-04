@@ -1,0 +1,36 @@
+{
+  "name": "refractgl",
+  "description": "Shader liquid glass for DOM elements: refraction, dispersion, blur and highlights in one WebGL2 draw call.",
+  "keywords": [
+    "refractgl",
+    "liquid-glass",
+    "glass",
+    "glassmorphism",
+    "frosted-glass",
+    "webgl2",
+    "webgpu",
+    "shader",
+    "refraction",
+    "ui"
+  ],
+  "license": "MIT",
+  "main": "./refractgl.js",
+  "module": "./refractgl.mjs",
+  "types": "./refractgl.d.ts",
+  "exports": {
+    ".": {
+      "types": "./refractgl.d.ts",
+      "import": "./refractgl.mjs",
+      "default": "./refractgl.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "refractgl.js",
+    "refractgl.mjs",
+    "refractgl.d.ts",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false
+}
