@@ -1,6 +1,6 @@
 # RefractGL
 
-<img width="600" height="535" src="https://github.com/user-attachments/assets/ba7f5065-7e23-4d85-b21d-db184ae3f652" />
+<img width="359" height="535" src="github.com/cadmium228/RefractGL/blob/main/screenshot.png" />
 
 RefractGL is shader-based "liquid glass" for ordinary DOM elements: refraction along a bevel profile, per-channel dispersion, blur that fades from rim to centre, specular highlights, Fresnel reflection and a rim light. Every glass element on the page is drawn by one WebGL2 context in a single draw call. WebGPU is available as an option. No dependencies, MIT licence.
 
